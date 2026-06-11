@@ -40,11 +40,10 @@ def decode_token_from_request():
     token = auth_header.split(" ", 1)[1].strip()
     try:
         payload = jwt.decode(
-            token,
-            current_app.config["JWT_SECRET_KEY"],
-            algorithms=[current_app.config["JWT_ALGORITHM"]],
-            issuer="user-service",
-        )
+        token,
+        current_app.config["JWT_SECRET_KEY"],
+        algorithms=[current_app.config["JWT_ALGORITHM"]],
+)
     except jwt.ExpiredSignatureError:
         return None, json_error(401, "unauthorized", "Token expired")
     except jwt.InvalidTokenError:

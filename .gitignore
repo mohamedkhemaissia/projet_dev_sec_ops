@@ -7,3 +7,5 @@ instance/
 /.vscode/
 /.pytest_cache/
 *.log
+mysql_data/
+.env

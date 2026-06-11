@@ -1,4 +1,4 @@
-version: '3.8'
+#version: '3.8'
 
 services:
   # --- CONTENEUR BASE DE DONNÉES MYSQL ---
@@ -37,13 +37,13 @@ services:
       - "5001:5001"
     environment:
       FLASK_DEBUG: "true"
-      SECRET_KEY: dev-secret-key-for-flask-jwt-demo-2026
-      JWT_SECRET_KEY: dev-secret-key-for-flask-jwt-demo-2026
+      SECRET_KEY: ${SECRET_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       JWT_EXPIRES_IN_MINUTES: "60"
       MYSQL_HOST: mysql
       MYSQL_PORT: "3306"
       MYSQL_USER: tms_user
-      MYSQL_PASSWORD: tms_password
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_DATABASE: user_service_db
 
   # --- MICROSERVICE GESTION DES COURS (COURSE SERVICE) ---

@@ -15,7 +15,7 @@ MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "tms_password")
 MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "user_service_db")
 
 DEFAULT_ADMIN_EMAIL = os.getenv("DEFAULT_ADMIN_EMAIL", "admin@training.com")
-#DEFAULT_ADMIN_PASSWORD = os.getenv("DEFAULT_ADMIN_PASSWORD", "Admin123!")
+DEFAULT_ADMIN_PASSWORD = os.getenv("DEFAULT_ADMIN_PASSWORD", "Admin123!")
 
 
 def get_connection():
