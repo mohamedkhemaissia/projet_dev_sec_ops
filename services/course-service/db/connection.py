@@ -6,7 +6,6 @@ import time
 import mysql.connector
 from mysql.connector import Error
 
-
 MYSQL_HOST = os.getenv("MYSQL_HOST", "mysql")
 MYSQL_PORT = int(os.getenv("MYSQL_PORT", "3306"))
 MYSQL_USER = os.getenv("MYSQL_USER", "tms_user")
@@ -40,8 +39,7 @@ def init_db():
     connection = get_connection()
     try:
         cursor = connection.cursor(dictionary=True)
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS courses (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 title VARCHAR(255) NOT NULL,
@@ -49,8 +47,7 @@ def init_db():
                 duration DOUBLE NOT NULL,
                 instructor VARCHAR(255) NOT NULL
             )
-            """
-        )
+            """)
         cursor.execute("SELECT COUNT(*) AS total FROM courses")
         total_courses = cursor.fetchone()["total"]
         if total_courses == 0:
@@ -120,7 +117,9 @@ def create_course(title, description, duration, instructor):
         connection.close()
 
 
-def update_course(course_id, title=None, description=None, duration=None, instructor=None):
+def update_course(
+    course_id, title=None, description=None, duration=None, instructor=None
+):
     updates = []
     values = []
 

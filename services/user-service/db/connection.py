@@ -7,7 +7,6 @@ import mysql.connector
 from mysql.connector import Error
 from werkzeug.security import generate_password_hash
 
-
 MYSQL_HOST = os.getenv("MYSQL_HOST", "mysql")
 MYSQL_PORT = int(os.getenv("MYSQL_PORT", "3306"))
 MYSQL_USER = os.getenv("MYSQL_USER", "tms_user")
@@ -44,8 +43,7 @@ def init_db():
     connection = get_connection()
     try:
         cursor = connection.cursor(dictionary=True)
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 name VARCHAR(255) NOT NULL,
@@ -53,8 +51,7 @@ def init_db():
                 password_hash VARCHAR(255) NOT NULL,
                 role VARCHAR(20) NOT NULL DEFAULT 'user'
             )
-            """
-        )
+            """)
         cursor.execute("SELECT COUNT(*) AS total FROM users")
         total_users = cursor.fetchone()["total"]
         if total_users == 0:
@@ -172,4 +169,4 @@ def delete_user(user_id):
         connection.close()
 
 
-#init_db()
+# init_db()

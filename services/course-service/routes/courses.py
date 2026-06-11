@@ -11,7 +11,6 @@ from db.connection import (
     update_course as db_update_course,
 )
 
-
 courses_bp = Blueprint("courses", __name__, url_prefix="/courses")
 
 
@@ -40,10 +39,10 @@ def decode_token_from_request():
     token = auth_header.split(" ", 1)[1].strip()
     try:
         payload = jwt.decode(
-        token,
-        current_app.config["JWT_SECRET_KEY"],
-        algorithms=[current_app.config["JWT_ALGORITHM"]],
-)
+            token,
+            current_app.config["JWT_SECRET_KEY"],
+            algorithms=[current_app.config["JWT_ALGORITHM"]],
+        )
     except jwt.ExpiredSignatureError:
         return None, json_error(401, "unauthorized", "Token expired")
     except jwt.InvalidTokenError:
@@ -111,7 +110,11 @@ def create_course():
     instructor = data.get("instructor")
 
     if not title or not description or duration is None or not instructor:
-        return json_error(400, "bad_request", "title, description, duration and instructor are required")
+        return json_error(
+            400,
+            "bad_request",
+            "title, description, duration and instructor are required",
+        )
 
     try:
         duration_value = float(duration)
