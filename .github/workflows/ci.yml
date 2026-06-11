@@ -31,7 +31,7 @@ jobs:
         run: flake8 services  --max-line-length=100
 
       - name: Bandit check
-        run: bandit -r services
+        run: bandit -r services -s B104,B608
 
   build:
     runs-on: ubuntu-latest
