@@ -28,13 +28,14 @@ jobs:
           pip install flake8 bandit
 
       - name: Flake8 check
-        run: flake8 services  --max-line-length=100
+        run: flake8 services --max-line-length=100
 
       - name: Bandit check
         run: bandit -r services -s B104,B608
 
   build:
     runs-on: ubuntu-latest
+    needs: quality
 
     steps:
       - name: Checkout
@@ -45,34 +46,42 @@ jobs:
 
       - name: Build course-service
         run: docker build -f infra/docker/course-service.Dockerfile .
-docker-push:
-  runs-on: ubuntu-latest
-  needs: [quality, build]
 
-  steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+  docker-push:
+    runs-on: ubuntu-latest
+    needs: build
 
-    - name: Login to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Build user-service image
-      run: |
-        docker build -f infra/docker/user-service.Dockerfile \
-        -t ${{ secrets.DOCKER_USERNAME }}/user-service:1.0 .
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: Build course-service image
-      run: |
-        docker build -f infra/docker/course-service.Dockerfile \
-        -t ${{ secrets.DOCKER_USERNAME }}/course-service:1.0 .
+      - name: Set version
+        run: echo "VERSION=${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
 
-    - name: Push user-service image
-      run: |
-        docker push ${{ secrets.DOCKER_USERNAME }}/user-service:1.0
+      - name: Build user-service image
+        run: |
+          docker build -f infra/docker/user-service.Dockerfile \
+          -t ${{ secrets.DOCKER_USERNAME }}/user-service:${VERSION} \
+          -t ${{ secrets.DOCKER_USERNAME }}/user-service:latest .
 
-    - name: Push course-service image
-      run: |
-        docker push ${{ secrets.DOCKER_USERNAME }}/course-service:1.0
+      - name: Build course-service image
+        run: |
+          docker build -f infra/docker/course-service.Dockerfile \
+          -t ${{ secrets.DOCKER_USERNAME }}/course-service:${VERSION} \
+          -t ${{ secrets.DOCKER_USERNAME }}/course-service:latest .
+
+      - name: Push user-service
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/user-service:${VERSION}
+          docker push ${{ secrets.DOCKER_USERNAME }}/user-service:latest
+
+      - name: Push course-service
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/course-service:${VERSION}
+          docker push ${{ secrets.DOCKER_USERNAME }}/course-service:latest
