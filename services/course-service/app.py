@@ -2,6 +2,7 @@ import os
 import sys
 
 from flask import Flask, jsonify
+from flask_cors import CORS
 
 # Ensure local package modules are importable when running the service directly.
 sys.path.insert(0, os.path.dirname(__file__))
@@ -13,6 +14,7 @@ from config import Config
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+    CORS(app, resources={r"/*": {"origins": "*"}})
     app.register_blueprint(courses_bp)
 
     @app.errorhandler(400)

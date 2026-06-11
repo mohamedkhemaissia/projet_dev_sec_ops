@@ -3,8 +3,13 @@ from functools import wraps
 import jwt
 from flask import Blueprint, current_app, jsonify, request, g
 
-from db.connection import courses_storage
-from models.course import make_course
+from db.connection import (
+    create_course as db_create_course,
+    delete_course as db_delete_course,
+    get_all_courses,
+    get_course_by_id,
+    update_course as db_update_course,
+)
 
 
 courses_bp = Blueprint("courses", __name__, url_prefix="/courses")
@@ -24,7 +29,7 @@ def get_json_body():
 
 
 def find_course_by_id(course_id):
-    return next((course for course in courses_storage["courses"] if course["id"] == course_id), None)
+    return get_course_by_id(course_id)
 
 
 def decode_token_from_request():
@@ -60,17 +65,33 @@ def jwt_required(fn):
     return wrapper
 
 
+def admin_required(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        payload, error_response = decode_token_from_request()
+        if error_response:
+            return error_response
+        if payload.get("role") != "admin":
+            return json_error(403, "forbidden", "Admin privileges required")
+        g.current_user = payload
+        return fn(*args, **kwargs)
+
+    return wrapper
+
+
 @courses_bp.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok", "service": current_app.config["SERVICE_NAME"]}), 200
 
 
 @courses_bp.route("", methods=["GET"])
+@jwt_required
 def get_courses():
-    return jsonify(courses_storage["courses"]), 200
+    return jsonify(get_all_courses()), 200
 
 
 @courses_bp.route("/<int:course_id>", methods=["GET"])
+@jwt_required
 def get_course(course_id):
     course = find_course_by_id(course_id)
     if course is None:
@@ -79,7 +100,7 @@ def get_course(course_id):
 
 
 @courses_bp.route("", methods=["POST"])
-@jwt_required
+@admin_required
 def create_course():
     data, error_response = get_json_body()
     if error_response:
@@ -101,15 +122,12 @@ def create_course():
     if duration_value <= 0:
         return json_error(400, "bad_request", "duration must be greater than 0")
 
-    course_id = courses_storage["next_id"]
-    courses_storage["next_id"] += 1
-    course = make_course(course_id, title, description, duration_value, instructor)
-    courses_storage["courses"].append(course)
+    course = db_create_course(title, description, duration_value, instructor)
     return jsonify({"course": course, "created_by": g.current_user["email"]}), 201
 
 
 @courses_bp.route("/<int:course_id>", methods=["PUT"])
-@jwt_required
+@admin_required
 def update_course(course_id):
     course = find_course_by_id(course_id)
     if course is None:
@@ -134,14 +152,20 @@ def update_course(course_id):
             return json_error(400, "bad_request", "duration must be greater than 0")
         course["duration"] = duration_value
 
-    return jsonify(course), 200
+    updated_course = db_update_course(
+        course_id,
+        title=course.get("title"),
+        description=course.get("description"),
+        duration=course.get("duration"),
+        instructor=course.get("instructor"),
+    )
+    return jsonify(updated_course), 200
 
 
 @courses_bp.route("/<int:course_id>", methods=["DELETE"])
-@jwt_required
+@admin_required
 def delete_course(course_id):
-    for index, course in enumerate(courses_storage["courses"]):
-        if course["id"] == course_id:
-            courses_storage["courses"].pop(index)
-            return jsonify({"message": "Course deleted"}), 200
-    return json_error(404, "not_found", "Course not found")
+    deleted_count = db_delete_course(course_id)
+    if deleted_count == 0:
+        return json_error(404, "not_found", "Course not found")
+    return jsonify({"message": "Course deleted"}), 200

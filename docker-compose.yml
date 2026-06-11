@@ -1,20 +1,73 @@
 version: '3.8'
+
 services:
+  # --- CONTENEUR BASE DE DONNÉES MYSQL ---
+  mysql:
+    image: mysql:8.0
+    container_name: training-mysql
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: user_service_db
+      MYSQL_USER: tms_user
+      MYSQL_PASSWORD: tms_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./infra/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # --- MICROSERVICE GESTION UTILISATEURS (USER SERVICE) ---
   user-service:
-    build: ./infra/docker
+    build:
+      context: .
+      dockerfile: infra/docker/user-service.Dockerfile
     image: user-service:latest
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
     ports:
       - "5001:5001"
+    environment:
+      FLASK_DEBUG: "true"
+      SECRET_KEY: dev-secret-key-for-flask-jwt-demo-2026
+      JWT_SECRET_KEY: dev-secret-key-for-flask-jwt-demo-2026
+      JWT_EXPIRES_IN_MINUTES: "60"
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: tms_user
+      MYSQL_PASSWORD: tms_password
+      MYSQL_DATABASE: user_service_db
+
+  # --- MICROSERVICE GESTION DES COURS (COURSE SERVICE) ---
   course-service:
-    build: ./infra/docker
+    build:
+      context: .
+      dockerfile: infra/docker/course-service.Dockerfile
     image: course-service:latest
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
     ports:
       - "5002:5002"
-  prometheus:
-    image: prom/prometheus:latest
-    ports:
-      - "9090:9090"
-  grafana:
-    image: grafana/grafana:latest
-    ports:
-      - "3000:3000"
+    environment:
+      FLASK_DEBUG: "true"
+      SECRET_KEY: dev-secret-key-for-flask-jwt-demo-2026
+      JWT_SECRET_KEY: dev-secret-key-for-flask-jwt-demo-2026
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: tms_user
+      MYSQL_PASSWORD: tms_password
+      MYSQL_DATABASE: course_service_db
+
+# --- VOLUMES DE PERSISTANCE ---
+volumes:
+  mysql_data:
