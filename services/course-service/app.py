@@ -1,6 +1,5 @@
 import os
 import sys
-
 from flask import Flask, jsonify
 from flask_cors import CORS
 from routes.courses import courses_bp
@@ -8,8 +7,6 @@ from config import Config
 
 # Ensure local package modules are importable when running the service directly.
 sys.path.insert(0, os.path.dirname(__file__))
-
-
 
 
 def create_app():

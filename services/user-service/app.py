@@ -10,8 +10,6 @@ from config import Config
 sys.path.insert(0, os.path.dirname(__file__))
 
 
-
-
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
