@@ -1,6 +1,9 @@
 import os
 import sys
 from flask import Flask, jsonify
+from flask_cors import CORS
+from db.connection import init_db 
+
 
 # Ensure local package modules (db, models, routes) are importable when running
 sys.path.insert(0, os.path.dirname(__file__))
@@ -12,7 +15,12 @@ from config import Config
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+    CORS(app, resources={r"/*": {"origins": "*"}})
     app.register_blueprint(users_bp)
+
+    with app.app_context():
+      init_db()
+
 
     @app.errorhandler(400)
     def bad_request(error):
