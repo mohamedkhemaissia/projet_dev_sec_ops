@@ -11,7 +11,7 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     CORS(app, resources={r"/*": {"origins": "*"}})
-    with app.app_context(): 
+    with app.app_context():
         init_db()
     app.register_blueprint(courses_bp)
     @app.errorhandler(400)

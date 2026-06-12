@@ -1,8 +1,5 @@
-"""MySQL storage helpers for the Course Service."""
-
 import os
 import time
-
 import mysql.connector
 from mysql.connector import Error
 
