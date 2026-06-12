@@ -60,12 +60,12 @@ services:
       - "5002:5002"
     environment:
       FLASK_DEBUG: "true"
-      SECRET_KEY: dev-secret-key-for-flask-jwt-demo-2026
-      JWT_SECRET_KEY: dev-secret-key-for-flask-jwt-demo-2026
+      SECRET_KEY: ${SECRET_KEY} 
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       MYSQL_HOST: mysql
       MYSQL_PORT: "3306"
       MYSQL_USER: tms_user
-      MYSQL_PASSWORD: tms_password
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD} 
       MYSQL_DATABASE: course_service_db
 
 # --- VOLUMES DE PERSISTANCE ---

@@ -164,4 +164,4 @@ def delete_course(course_id):
         connection.close()
 
 
-init_db()
+#init_db()
