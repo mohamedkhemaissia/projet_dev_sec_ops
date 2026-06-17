@@ -9,7 +9,7 @@ services:
     command: --default-authentication-plugin=mysql_native_password
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: user_service_db
+      MYSQL_DATABASE: training_platform_db
       MYSQL_USER: tms_user
       MYSQL_PASSWORD: tms_password
     ports:
@@ -43,8 +43,8 @@ services:
       MYSQL_HOST: mysql
       MYSQL_PORT: "3306"
       MYSQL_USER: tms_user
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      MYSQL_DATABASE: user_service_db
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-tms_password}
+      MYSQL_DATABASE: training_platform_db
 
   # --- MICROSERVICE GESTION DES COURS (COURSE SERVICE) ---
   course-service:
@@ -65,9 +65,8 @@ services:
       MYSQL_HOST: mysql
       MYSQL_PORT: "3306"
       MYSQL_USER: tms_user
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD} 
-      MYSQL_DATABASE: course_service_db
-
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-tms_password}
+      MYSQL_DATABASE: training_platform_db
 # --- VOLUMES DE PERSISTANCE ---
 volumes:
   mysql_data:
