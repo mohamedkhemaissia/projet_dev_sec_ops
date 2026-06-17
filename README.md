@@ -1,88 +1,145 @@
-# Projet DevSecOps - Microservices Demo
+# TrainingHub - Plateforme microservices de formation
 
-Monorepo de démonstration pour un PFE DevSecOps contenant deux microservices Python/Flask (User Service et Course Service), un frontend minimal, et l'infrastructure CI/CD et monitoring.
+Projet PFE DevSecOps base sur une plateforme de training professionnelle.
 
-Structure et instructions de démarrage sont dans les dossiers `services/`, `frontend/`, `infra/` et `pipelines/`.
+Le monorepo contient deux microservices Python/Flask et une base MySQL unique:
 
-## Architecture du projet
+- `user-service`: inscription, connexion JWT, profils et roles.
+- `course-service`: catalogue de formations, CRUD des cours et inscriptions.
+- `mysql`: base unique `training_platform_db`.
 
-Le projet est organisé en monorepo avec une architecture microservices.
+## Architecture
 
-### Vue d'ensemble
+Tables principales du MVP:
 
-- `user-service` gère l'inscription, la connexion, les jetons JWT et la gestion des comptes utilisateurs.
-- `course-service` gère le catalogue de formations et les opérations CRUD protégées par JWT.
-- `docker-compose.yml` orchestre le lancement local des services, du monitoring et de la supervision.
-- `infra/docker/` contient les Dockerfiles de chaque service.
-- `pipelines/` contient l'exemple de pipeline historique; l'automatisation active doit maintenant se faire avec GitHub Actions.
+- `users`
+- `courses`
+- `enrollments`
 
-### Logique d'exécution
+Roles applicatifs:
 
-1. Le client appelle `user-service` pour créer un compte ou se connecter.
-2. `user-service` renvoie un JWT signé.
-3. Le client envoie ce JWT dans l'en-tête `Authorization: Bearer ...`.
-4. `course-service` vérifie le jeton avant d'autoriser les opérations protégées.
-5. Chaque microservice reste indépendant sur son domaine métier, ce qui facilite la maintenance et le déploiement.
+- `admin`
+- `trainer`
+- `learner`
 
-## Lancer les microservices Flask
+Flux principal:
 
-Les deux applications sont des microservices RESTful. Dans un projet comme celui-ci, le terme le plus correct est donc microservices, même si on peut aussi dire web services.
+1. Un utilisateur cree un compte ou se connecte via `user-service`.
+2. `user-service` retourne un JWT.
+3. Le client envoie le JWT dans `Authorization: Bearer JWT_TOKEN`.
+4. `course-service` verifie le JWT pour proteger les cours et les inscriptions.
+5. Les deux microservices utilisent la meme base MySQL `training_platform_db`.
 
-### Option 1 - Lancement avec Docker Compose
+## Lancement avec Docker Compose
 
 ```bash
 docker compose up --build
 ```
 
-Services exposés:
+Services exposes:
 
 - User Service: `http://localhost:5001`
 - Course Service: `http://localhost:5002`
+- MySQL: `localhost:3306`
 
-### Option 2 - Lancement local en Python
-
-Terminal 1:
-
-```bash
-cd services/user-service
-python app.py
-```
-
-Terminal 2:
+Si un ancien volume MySQL existe avec les anciennes bases, reinitialiser le volume:
 
 ```bash
-cd services/course-service
-python app.py
+docker compose down -v
+docker compose up --build
 ```
 
-## Tester rapidement
+## Tests rapides
 
-### 1. Créer un utilisateur
+### Health checks
 
 ```bash
-curl -X POST http://localhost:5001/users ^
-	-H "Content-Type: application/json" ^
-	-d "{\"name\":\"Alice Demo\",\"email\":\"alice@example.com\",\"password\":\"Password123!\"}"
+curl http://localhost:5001/api/v1/users/health
+curl http://localhost:5002/courses/health
 ```
 
-### 2. Se connecter et récupérer le JWT
+### Creer un utilisateur learner
 
 ```bash
-curl -X POST http://localhost:5001/users/login ^
-	-H "Content-Type: application/json" ^
-	-d "{\"email\":\"alice@example.com\",\"password\":\"Password123!\"}"
+curl -X POST http://localhost:5001/api/v1/users/register ^
+  -H "Content-Type: application/json" ^
+  -d "{\"name\":\"Alice Demo\",\"email\":\"alice@example.com\",\"password\":\"Password123!\",\"role\":\"learner\"}"
 ```
 
-### 3. Créer une formation avec le token JWT
+### Se connecter
+
+```bash
+curl -X POST http://localhost:5001/api/v1/users/login ^
+  -H "Content-Type: application/json" ^
+  -d "{\"email\":\"alice@example.com\",\"password\":\"Password123!\"}"
+```
+
+### Creer une formation
+
+Cette route demande un token avec le role `admin` ou `trainer`.
 
 ```bash
 curl -X POST http://localhost:5002/courses ^
-	-H "Content-Type: application/json" ^
-	-H "Authorization: Bearer JWT_TOKEN_ICI" ^
-	-d "{\"title\":\"DevSecOps Fundamentals\",\"description\":\"Introduction to secure delivery pipelines\",\"duration\":24,\"instructor\":\"Dr. Martin\"}"
+  -H "Content-Type: application/json" ^
+  -H "Authorization: Bearer JWT_TOKEN_ICI" ^
+  -d "{\"title\":\"DevSecOps Fundamentals\",\"description\":\"Introduction to secure delivery pipelines\",\"duration\":24,\"level\":\"beginner\",\"category\":\"DevSecOps\"}"
 ```
 
-### Endpoints principaux
+### Lister les formations
 
-- User Service: `GET /users/health`, `POST /users`, `POST /users/login`, `GET /users/me`, `GET /users/<id>`, `PUT /users/<id>`, `DELETE /users/<id>`
-- Course Service: `GET /courses/health`, `GET /courses`, `GET /courses/<id>`, `POST /courses`, `PUT /courses/<id>`, `DELETE /courses/<id>`
+```bash
+curl -X GET http://localhost:5002/courses ^
+  -H "Authorization: Bearer JWT_TOKEN_ICI"
+```
+
+### S'inscrire a une formation
+
+```bash
+curl -X POST http://localhost:5002/courses/1/enroll ^
+  -H "Authorization: Bearer JWT_TOKEN_ICI"
+```
+
+### Voir mes inscriptions
+
+```bash
+curl -X GET http://localhost:5002/courses/enrollments/me ^
+  -H "Authorization: Bearer JWT_TOKEN_ICI"
+```
+
+### Changer le statut d'une inscription
+
+Cette route demande un token avec le role `admin` ou `trainer`.
+
+```bash
+curl -X PUT http://localhost:5002/courses/enrollments/1/status ^
+  -H "Content-Type: application/json" ^
+  -H "Authorization: Bearer JWT_TOKEN_ICI" ^
+  -d "{\"status\":\"completed\"}"
+```
+
+## Endpoints principaux
+
+User Service:
+
+- `GET /api/v1/users/health`
+- `POST /api/v1/users/register`
+- `POST /api/v1/users/login`
+- `GET /api/v1/users/me`
+- `PUT /api/v1/users/me`
+- `GET /api/v1/users/`
+- `GET /api/v1/users/<id>`
+- `PUT /api/v1/users/<id>`
+- `DELETE /api/v1/users/<id>`
+
+Course Service:
+
+- `GET /courses/health`
+- `GET /courses`
+- `GET /courses/<id>`
+- `POST /courses`
+- `PUT /courses/<id>`
+- `DELETE /courses/<id>`
+- `POST /courses/<id>/enroll`
+- `GET /courses/enrollments/me`
+- `GET /courses/<id>/enrollments`
+- `PUT /courses/enrollments/<id>/status`

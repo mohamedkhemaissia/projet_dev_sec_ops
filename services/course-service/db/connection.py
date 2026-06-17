@@ -7,7 +7,7 @@ MYSQL_HOST = os.getenv("MYSQL_HOST", "mysql")
 MYSQL_PORT = int(os.getenv("MYSQL_PORT", "3306"))
 MYSQL_USER = os.getenv("MYSQL_USER", "tms_user")
 MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "tms_password")
-MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "course_service_db")
+MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "training_platform_db")
 
 
 def get_connection():
@@ -42,7 +42,22 @@ def init_db():
                 title VARCHAR(255) NOT NULL,
                 description TEXT NOT NULL,
                 duration DOUBLE NOT NULL,
-                instructor VARCHAR(255) NOT NULL
+                level VARCHAR(20) NOT NULL DEFAULT 'beginner',
+                category VARCHAR(100) NOT NULL,
+                trainer_id INT NULL
+            )
+            """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS enrollments (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                course_id INT NOT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'enrolled',
+                enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                completed_at TIMESTAMP NULL,
+                UNIQUE KEY unique_enrollment (user_id, course_id),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
             )
             """)
         cursor.execute("SELECT COUNT(*) AS total FROM courses")
@@ -50,21 +65,25 @@ def init_db():
         if total_courses == 0:
             cursor.executemany(
                 """
-                INSERT INTO courses (title, description, duration, instructor)
-                VALUES (%s, %s, %s, %s)
+                INSERT INTO courses (title, description, duration, level, category, trainer_id)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 """,
                 [
                     (
                         "DevSecOps Fundamentals",
                         "Introduction to secure delivery pipelines",
                         24,
-                        "Dr Martin",
+                        "beginner",
+                        "DevSecOps",
+                        None,
                     ),
                     (
                         "Docker and CI/CD",
                         "Learn containers and automation basics",
                         18,
-                        "Ms Sara",
+                        "intermediate",
+                        "CI/CD",
+                        None,
                     ),
                 ],
             )
@@ -95,16 +114,16 @@ def get_course_by_id(course_id):
         connection.close()
 
 
-def create_course(title, description, duration, instructor):
+def create_course(title, description, duration, level, category, trainer_id):
     connection = get_connection()
     try:
         cursor = connection.cursor(dictionary=True)
         cursor.execute(
             """
-            INSERT INTO courses (title, description, duration, instructor)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO courses (title, description, duration, level, category, trainer_id)
+            VALUES (%s, %s, %s, %s, %s, %s)
             """,
-            (title, description, duration, instructor),
+            (title, description, duration, level, category, trainer_id),
         )
         connection.commit()
         cursor.execute("SELECT * FROM courses WHERE id = %s", (cursor.lastrowid,))
@@ -115,7 +134,13 @@ def create_course(title, description, duration, instructor):
 
 
 def update_course(
-    course_id, title=None, description=None, duration=None, instructor=None
+    course_id,
+    title=None,
+    description=None,
+    duration=None,
+    level=None,
+    category=None,
+    trainer_id=None,
 ):
     updates = []
     values = []
@@ -129,9 +154,15 @@ def update_course(
     if duration is not None:
         updates.append("duration = %s")
         values.append(duration)
-    if instructor is not None:
-        updates.append("instructor = %s")
-        values.append(instructor)
+    if level is not None:
+        updates.append("level = %s")
+        values.append(level)
+    if category is not None:
+        updates.append("category = %s")
+        values.append(category)
+    if trainer_id is not None:
+        updates.append("trainer_id = %s")
+        values.append(trainer_id)
 
     if not updates:
         return get_course_by_id(course_id)
@@ -157,6 +188,101 @@ def delete_course(course_id):
         cursor.execute("DELETE FROM courses WHERE id = %s", (course_id,))
         connection.commit()
         return cursor.rowcount
+    finally:
+        connection.close()
+
+
+def create_enrollment(user_id, course_id):
+    connection = get_connection()
+    try:
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute(
+            """
+            INSERT INTO enrollments (user_id, course_id)
+            VALUES (%s, %s)
+            """,
+            (user_id, course_id),
+        )
+        connection.commit()
+        cursor.execute("SELECT * FROM enrollments WHERE id = %s", (cursor.lastrowid,))
+        return cursor.fetchone()
+    finally:
+        connection.close()
+
+
+def get_enrollment(user_id, course_id):
+    connection = get_connection()
+    try:
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT * FROM enrollments
+            WHERE user_id = %s AND course_id = %s
+            """,
+            (user_id, course_id),
+        )
+        return cursor.fetchone()
+    finally:
+        connection.close()
+
+
+def get_enrollments_by_user(user_id):
+    connection = get_connection()
+    try:
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT e.*, c.title, c.description, c.duration, c.level, c.category
+            FROM enrollments e
+            JOIN courses c ON c.id = e.course_id
+            WHERE e.user_id = %s
+            ORDER BY e.enrolled_at DESC
+            """,
+            (user_id,),
+        )
+        return cursor.fetchall()
+    finally:
+        connection.close()
+
+
+def get_enrollments_by_course(course_id):
+    connection = get_connection()
+    try:
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT e.*, u.name, u.email
+            FROM enrollments e
+            JOIN users u ON u.id = e.user_id
+            WHERE e.course_id = %s
+            ORDER BY e.enrolled_at DESC
+            """,
+            (course_id,),
+        )
+        return cursor.fetchall()
+    finally:
+        connection.close()
+
+
+def update_enrollment_status(enrollment_id, status):
+    connection = get_connection()
+    try:
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute(
+            """
+            UPDATE enrollments
+            SET status = %s,
+                completed_at = CASE
+                    WHEN %s = 'completed' THEN CURRENT_TIMESTAMP
+                    ELSE completed_at
+                END
+            WHERE id = %s
+            """,
+            (status, status, enrollment_id),
+        )
+        connection.commit()
+        cursor.execute("SELECT * FROM enrollments WHERE id = %s", (enrollment_id,))
+        return cursor.fetchone()
     finally:
         connection.close()
 

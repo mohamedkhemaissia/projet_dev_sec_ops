@@ -1,17 +1,24 @@
 from functools import wraps
 
 import jwt
-from flask import Blueprint, current_app, jsonify, request, g
+from flask import Blueprint, current_app, g, jsonify, request
 
 from db.connection import (
     create_course as db_create_course,
+    create_enrollment,
     delete_course as db_delete_course,
     get_all_courses,
     get_course_by_id,
+    get_enrollment,
+    get_enrollments_by_course,
+    get_enrollments_by_user,
     update_course as db_update_course,
+    update_enrollment_status,
 )
 
 courses_bp = Blueprint("courses", __name__, url_prefix="/courses")
+ALLOWED_LEVELS = {"beginner", "intermediate", "advanced"}
+ALLOWED_ENROLLMENT_STATUS = {"enrolled", "in_progress", "completed"}
 
 
 def json_error(status_code, error, message):
@@ -63,14 +70,14 @@ def jwt_required(fn):
     return wrapper
 
 
-def admin_required(fn):
+def trainer_or_admin_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
         payload, error_response = decode_token_from_request()
         if error_response:
             return error_response
-        if payload.get("role") != "admin":
-            return json_error(403, "forbidden", "Admin privileges required")
+        if payload.get("role") not in {"admin", "trainer"}:
+            return json_error(403, "forbidden", "Trainer or admin privileges required")
         g.current_user = payload
         return fn(*args, **kwargs)
 
@@ -98,7 +105,7 @@ def get_course(course_id):
 
 
 @courses_bp.route("", methods=["POST"])
-@admin_required
+@trainer_or_admin_required
 def create_course():
     data, error_response = get_json_body()
     if error_response:
@@ -107,13 +114,15 @@ def create_course():
     title = data.get("title")
     description = data.get("description")
     duration = data.get("duration")
-    instructor = data.get("instructor")
+    level = data.get("level", "beginner")
+    category = data.get("category")
+    trainer_id = data.get("trainer_id", g.current_user.get("user_id"))
 
-    if not title or not description or duration is None or not instructor:
+    if not title or not description or duration is None or not category:
         return json_error(
             400,
             "bad_request",
-            "title, description, duration and instructor are required",
+            "title, description, duration and category are required",
         )
 
     try:
@@ -124,12 +133,22 @@ def create_course():
     if duration_value <= 0:
         return json_error(400, "bad_request", "duration must be greater than 0")
 
-    course = db_create_course(title, description, duration_value, instructor)
-    return jsonify({"course": course, "created_by": g.current_user["email"]}), 201
+    if level not in ALLOWED_LEVELS:
+        return json_error(400, "bad_request", "Invalid level")
+
+    course = db_create_course(
+        title,
+        description,
+        duration_value,
+        level,
+        category,
+        trainer_id,
+    )
+    return jsonify({"course": course, "created_by": g.current_user.get("email")}), 201
 
 
 @courses_bp.route("/<int:course_id>", methods=["PUT"])
-@admin_required
+@trainer_or_admin_required
 def update_course(course_id):
     course = find_course_by_id(course_id)
     if course is None:
@@ -143,8 +162,14 @@ def update_course(course_id):
         course["title"] = data["title"]
     if "description" in data and data["description"]:
         course["description"] = data["description"]
-    if "instructor" in data and data["instructor"]:
-        course["instructor"] = data["instructor"]
+    if "level" in data and data["level"]:
+        if data["level"] not in ALLOWED_LEVELS:
+            return json_error(400, "bad_request", "Invalid level")
+        course["level"] = data["level"]
+    if "category" in data and data["category"]:
+        course["category"] = data["category"]
+    if "trainer_id" in data:
+        course["trainer_id"] = data["trainer_id"]
     if "duration" in data:
         try:
             duration_value = float(data["duration"])
@@ -159,15 +184,65 @@ def update_course(course_id):
         title=course.get("title"),
         description=course.get("description"),
         duration=course.get("duration"),
-        instructor=course.get("instructor"),
+        level=course.get("level"),
+        category=course.get("category"),
+        trainer_id=course.get("trainer_id"),
     )
     return jsonify(updated_course), 200
 
 
 @courses_bp.route("/<int:course_id>", methods=["DELETE"])
-@admin_required
+@trainer_or_admin_required
 def delete_course(course_id):
     deleted_count = db_delete_course(course_id)
     if deleted_count == 0:
         return json_error(404, "not_found", "Course not found")
     return jsonify({"message": "Course deleted"}), 200
+
+
+@courses_bp.route("/<int:course_id>/enroll", methods=["POST"])
+@jwt_required
+def enroll_in_course(course_id):
+    course = find_course_by_id(course_id)
+    if course is None:
+        return json_error(404, "not_found", "Course not found")
+
+    user_id = g.current_user["user_id"]
+    if get_enrollment(user_id, course_id):
+        return json_error(409, "conflict", "User already enrolled in this course")
+
+    enrollment = create_enrollment(user_id, course_id)
+    return jsonify(enrollment), 201
+
+
+@courses_bp.route("/enrollments/me", methods=["GET"])
+@jwt_required
+def get_my_enrollments():
+    return jsonify(get_enrollments_by_user(g.current_user["user_id"])), 200
+
+
+@courses_bp.route("/<int:course_id>/enrollments", methods=["GET"])
+@trainer_or_admin_required
+def get_course_enrollments(course_id):
+    course = find_course_by_id(course_id)
+    if course is None:
+        return json_error(404, "not_found", "Course not found")
+    return jsonify(get_enrollments_by_course(course_id)), 200
+
+
+@courses_bp.route("/enrollments/<int:enrollment_id>/status", methods=["PUT"])
+@trainer_or_admin_required
+def change_enrollment_status(enrollment_id):
+    data, error_response = get_json_body()
+    if error_response:
+        return error_response
+
+    status = data.get("status")
+    if status not in ALLOWED_ENROLLMENT_STATUS:
+        return json_error(400, "bad_request", "Invalid enrollment status")
+
+    enrollment = update_enrollment_status(enrollment_id, status)
+    if enrollment is None:
+        return json_error(404, "not_found", "Enrollment not found")
+
+    return jsonify(enrollment), 200
