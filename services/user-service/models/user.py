@@ -1,7 +1,7 @@
 """User model helpers used by the Flask routes."""
 
 
-def make_user(user_id, name, email, password_hash, role="user"):
+def make_user(user_id, name, email, password_hash, role="learner"):
     return {
         "id": user_id,
         "name": name,
@@ -16,5 +16,5 @@ def public_user(user):
         "id": user["id"],
         "name": user["name"],
         "email": user["email"],
-        "role": user.get("role", "user"),
+        "role": user.get("role", "learner"),
     }

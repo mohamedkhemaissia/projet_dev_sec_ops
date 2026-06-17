@@ -1,4 +1,4 @@
-"""MySQL storage helpers for the User Service."""
+﻿"""MySQL storage helpers for the User Service."""
 
 import os
 import time
@@ -11,7 +11,7 @@ MYSQL_HOST = os.getenv("MYSQL_HOST", "mysql")
 MYSQL_PORT = int(os.getenv("MYSQL_PORT", "3306"))
 MYSQL_USER = os.getenv("MYSQL_USER", "tms_user")
 MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "tms_password")
-MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "user_service_db")
+MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "training_platform_db")
 
 DEFAULT_ADMIN_EMAIL = os.getenv("DEFAULT_ADMIN_EMAIL", "admin@training.com")
 DEFAULT_ADMIN_PASSWORD = os.getenv("DEFAULT_ADMIN_PASSWORD", "Admin123!")
@@ -49,7 +49,8 @@ def init_db():
                 name VARCHAR(255) NOT NULL,
                 email VARCHAR(255) NOT NULL UNIQUE,
                 password_hash VARCHAR(255) NOT NULL,
-                role VARCHAR(20) NOT NULL DEFAULT 'user'
+                role VARCHAR(20) NOT NULL DEFAULT 'learner',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
             """)
         cursor.execute("SELECT COUNT(*) AS total FROM users")
@@ -105,7 +106,7 @@ def get_user_by_email(email):
         connection.close()
 
 
-def create_user(name, email, password_hash, role="user"):
+def create_user(name, email, password_hash, role="learner"):
     connection = get_connection()
     try:
         cursor = connection.cursor(dictionary=True)

@@ -16,8 +16,7 @@ from models.user import public_user
 from config import Config
 
 users_bp = Blueprint("users", __name__, url_prefix="/api/v1/users")
-ALLOWED_ROLES = {"user", "student", "instructor", "admin"}
-
+ALLOWED_ROLES = {"learner", "trainer", "admin"}
 
 # ─── DÉCORATEURS ──────────────────────────────────────────────────────────────
 
@@ -101,6 +100,11 @@ def admin_required(f):
 # ─── ROUTES PUBLIQUES ─────────────────────────────────────────────────────────
 
 
+@users_bp.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "ok", "service": Config.SERVICE_NAME}), 200
+
+
 @users_bp.route("/register", methods=["POST"])
 def register():
     data = request.get_json() or {}
@@ -113,8 +117,20 @@ def register():
     if get_user_by_email(data["email"]):
         return jsonify({"error": "conflict", "message": "Email déjà utilisé"}), 409
 
+    role = data.get("role", "learner")
+    if role not in ALLOWED_ROLES:
+        return (
+            jsonify(
+                {
+                    "error": "bad_request",
+                    "message": f"Role invalide. Valeurs acceptees : {ALLOWED_ROLES}",
+                }
+            ),
+            400,
+        )
+
     hashed = generate_password_hash(data["password"])
-    user = create_user(data["name"], data["email"], hashed, data.get("role", "user"))
+    user = create_user(data["name"], data["email"], hashed, role)
     return jsonify(public_user(user)), 201
 
 
@@ -142,6 +158,7 @@ def login():
     token = jwt.encode(
         {
             "user_id": user["id"],
+            "email": user["email"],
             "role": user["role"],
             "exp": datetime.datetime.utcnow()
             + datetime.timedelta(minutes=Config.JWT_EXPIRES_IN_MINUTES),
