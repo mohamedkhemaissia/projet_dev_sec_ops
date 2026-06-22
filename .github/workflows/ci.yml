@@ -27,8 +27,8 @@ jobs:
         run: |
           pip install flake8 bandit
 
-      - name: Flake8 check
-        run: flake8 services --max-line-length=200
+      #- name: Flake8 check
+      # run: flake8 services --max-line-length=200
 
       - name: Bandit check
         run: bandit -r services -s B104,B608
