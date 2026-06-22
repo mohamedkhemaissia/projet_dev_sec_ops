@@ -45,6 +45,8 @@ services:
       MYSQL_USER: tms_user
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-tms_password}
       MYSQL_DATABASE: training_platform_db
+      DEFAULT_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-admin@training.com}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-Admin123!}
 
   # --- MICROSERVICE GESTION DES COURS (COURSE SERVICE) ---
   course-service:
