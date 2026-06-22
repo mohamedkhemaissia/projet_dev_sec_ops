@@ -193,9 +193,10 @@ def update_profile(current_user):
     if "name" in data:
         allowed["name"] = data["name"]
     if "email" in data:
-        if get_user_by_email(data["email"]):
-            return jsonify({"error": "conflict", "message": "Email déjà utilisé"}), 409
-        allowed["email"] = data["email"]
+     existing = get_user_by_email(data["email"])
+    if existing and existing["id"] != current_user["id"]:
+        return jsonify({"error": "conflict", "message": "Email déjà utilisé"}), 409
+    allowed["email"] = data["email"]
     if "password" in data:
         allowed["password_hash"] = generate_password_hash(data["password"])
 
