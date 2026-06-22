@@ -3,6 +3,9 @@ import jwt
 from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
+import re
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
 
 from db.connection import (
     create_user,
@@ -128,6 +131,8 @@ def register():
             ),
             400,
         )
+    if not EMAIL_RE.match(data["email"]):
+     return jsonify({"error": "bad_request", "message": "Format d'email invalide"}), 400
 
     hashed = generate_password_hash(data["password"])
     user = create_user(data["name"], data["email"], hashed, role)
