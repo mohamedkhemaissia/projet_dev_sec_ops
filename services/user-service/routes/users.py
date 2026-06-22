@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timezone, timedelta
 import jwt
 from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -160,8 +160,8 @@ def login():
             "user_id": user["id"],
             "email": user["email"],
             "role": user["role"],
-            "exp": datetime.datetime.utcnow()
-            + datetime.timedelta(minutes=Config.JWT_EXPIRES_IN_MINUTES),
+            "exp": datetime.now(tz=timezone.utc)
+              + timedelta(minutes=Config.JWT_EXPIRES_IN_MINUTES),
         },
         Config.JWT_SECRET_KEY,
         algorithm=Config.JWT_ALGORITHM,
