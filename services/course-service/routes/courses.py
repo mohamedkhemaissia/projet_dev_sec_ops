@@ -16,7 +16,7 @@ from db.connection import (
     update_enrollment_status,
 )
 
-courses_bp = Blueprint("courses", __name__, url_prefix="/courses")
+courses_bp = Blueprint("courses", __name__, url_prefix="/api/v1/courses")
 ALLOWED_LEVELS = {"beginner", "intermediate", "advanced"}
 ALLOWED_ENROLLMENT_STATUS = {"enrolled", "in_progress", "completed"}
 
