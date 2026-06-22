@@ -38,41 +38,6 @@ def get_connection():
 def row_to_user(row):
     return row if row is not None else None
 
-
-def init_db():
-    connection = get_connection()
-    try:
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                name VARCHAR(255) NOT NULL,
-                email VARCHAR(255) NOT NULL UNIQUE,
-                password_hash VARCHAR(255) NOT NULL,
-                role VARCHAR(20) NOT NULL DEFAULT 'learner',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-            """)
-        cursor.execute("SELECT COUNT(*) AS total FROM users")
-        total_users = cursor.fetchone()["total"]
-        if total_users == 0:
-            cursor.execute(
-                """
-                INSERT INTO users (name, email, password_hash, role)
-                VALUES (%s, %s, %s, %s)
-                """,
-                (
-                    "Admin",
-                    DEFAULT_ADMIN_EMAIL,
-                    generate_password_hash(DEFAULT_ADMIN_PASSWORD),
-                    "admin",
-                ),
-            )
-        connection.commit()
-    finally:
-        connection.close()
-
-
 def get_all_users():
     connection = get_connection()
     try:

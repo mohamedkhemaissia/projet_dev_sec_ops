@@ -31,67 +31,6 @@ def get_connection():
 def row_to_course(row):
     return row if row is not None else None
 
-
-def init_db():
-    connection = get_connection()
-    try:
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS courses (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                title VARCHAR(255) NOT NULL,
-                description TEXT NOT NULL,
-                duration DOUBLE NOT NULL,
-                level VARCHAR(20) NOT NULL DEFAULT 'beginner',
-                category VARCHAR(100) NOT NULL,
-                trainer_id INT NULL
-            )
-            """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS enrollments (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                course_id INT NOT NULL,
-                status VARCHAR(20) NOT NULL DEFAULT 'enrolled',
-                enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                completed_at TIMESTAMP NULL,
-                UNIQUE KEY unique_enrollment (user_id, course_id),
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
-            )
-            """)
-        cursor.execute("SELECT COUNT(*) AS total FROM courses")
-        total_courses = cursor.fetchone()["total"]
-        if total_courses == 0:
-            cursor.executemany(
-                """
-                INSERT INTO courses (title, description, duration, level, category, trainer_id)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                """,
-                [
-                    (
-                        "DevSecOps Fundamentals",
-                        "Introduction to secure delivery pipelines",
-                        24,
-                        "beginner",
-                        "DevSecOps",
-                        None,
-                    ),
-                    (
-                        "Docker and CI/CD",
-                        "Learn containers and automation basics",
-                        18,
-                        "intermediate",
-                        "CI/CD",
-                        None,
-                    ),
-                ],
-            )
-        connection.commit()
-    finally:
-        connection.close()
-
-
 def get_all_courses():
     connection = get_connection()
     try:
@@ -209,7 +148,6 @@ def create_enrollment(user_id, course_id):
     finally:
         connection.close()
 
-
 def get_enrollment(user_id, course_id):
     connection = get_connection()
     try:
@@ -224,7 +162,6 @@ def get_enrollment(user_id, course_id):
         return cursor.fetchone()
     finally:
         connection.close()
-
 
 def get_enrollments_by_user(user_id):
     connection = get_connection()
@@ -244,16 +181,15 @@ def get_enrollments_by_user(user_id):
     finally:
         connection.close()
 
-
 def get_enrollments_by_course(course_id):
     connection = get_connection()
     try:
         cursor = connection.cursor(dictionary=True)
         cursor.execute(
             """
-            SELECT e.*, u.name, u.email
+            SELECT e.id, e.user_id, e.course_id, e.status,
+                   e.enrolled_at, e.completed_at
             FROM enrollments e
-            JOIN users u ON u.id = e.user_id
             WHERE e.course_id = %s
             ORDER BY e.enrolled_at DESC
             """,
