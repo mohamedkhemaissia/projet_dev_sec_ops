@@ -49,13 +49,40 @@ docker compose down -v
 docker compose up --build
 ```
 
+## Tests automatisés
+
+```powershell
+pip install -r services/user-service/requirements.txt
+pip install -r services/course-service/requirements.txt
+pip install -r requirements-test.txt
+.\.venv\Scripts\python.exe -m pytest tests/ -v
+```
+
+Ou :
+
+```powershell
+.\scripts\run-tests.ps1
+```
+
+## Pipeline CI/CD
+
+A chaque push sur `main` ou `develop`, GitHub Actions execute :
+
+1. Pytest + Bandit
+2. Build Docker + scan Trivy
+3. Push des images vers ghcr.io (branche `main` uniquement)
+
+Flake8 est conserve dans le workflow mais commente temporairement pendant la stabilisation du MVP.
+
+Voir `.github/workflows/ci.yml`.
+
 ## Tests rapides
 
 ### Health checks
 
 ```bash
 curl http://localhost:5001/api/v1/users/health
-curl http://localhost:5002/courses/health
+curl http://localhost:5002/api/v1/courses/health
 ```
 
 ### Creer un utilisateur learner
@@ -79,7 +106,7 @@ curl -X POST http://localhost:5001/api/v1/users/login ^
 Cette route demande un token avec le role `admin` ou `trainer`.
 
 ```bash
-curl -X POST http://localhost:5002/courses ^
+curl -X POST http://localhost:5002/api/v1/courses ^
   -H "Content-Type: application/json" ^
   -H "Authorization: Bearer JWT_TOKEN_ICI" ^
   -d "{\"title\":\"DevSecOps Fundamentals\",\"description\":\"Introduction to secure delivery pipelines\",\"duration\":24,\"level\":\"beginner\",\"category\":\"DevSecOps\"}"
@@ -88,21 +115,21 @@ curl -X POST http://localhost:5002/courses ^
 ### Lister les formations
 
 ```bash
-curl -X GET http://localhost:5002/courses ^
+curl -X GET http://localhost:5002/api/v1/courses ^
   -H "Authorization: Bearer JWT_TOKEN_ICI"
 ```
 
 ### S'inscrire a une formation
 
 ```bash
-curl -X POST http://localhost:5002/courses/1/enroll ^
+curl -X POST http://localhost:5002/api/v1/courses/1/enroll ^
   -H "Authorization: Bearer JWT_TOKEN_ICI"
 ```
 
 ### Voir mes inscriptions
 
 ```bash
-curl -X GET http://localhost:5002/courses/enrollments/me ^
+curl -X GET http://localhost:5002/api/v1/courses/enrollments/me ^
   -H "Authorization: Bearer JWT_TOKEN_ICI"
 ```
 
@@ -111,7 +138,7 @@ curl -X GET http://localhost:5002/courses/enrollments/me ^
 Cette route demande un token avec le role `admin` ou `trainer`.
 
 ```bash
-curl -X PUT http://localhost:5002/courses/enrollments/1/status ^
+curl -X PUT http://localhost:5002/api/v1/courses/enrollments/1/status ^
   -H "Content-Type: application/json" ^
   -H "Authorization: Bearer JWT_TOKEN_ICI" ^
   -d "{\"status\":\"completed\"}"
@@ -133,13 +160,13 @@ User Service:
 
 Course Service:
 
-- `GET /courses/health`
-- `GET /courses`
-- `GET /courses/<id>`
-- `POST /courses`
-- `PUT /courses/<id>`
-- `DELETE /courses/<id>`
-- `POST /courses/<id>/enroll`
-- `GET /courses/enrollments/me`
-- `GET /courses/<id>/enrollments`
-- `PUT /courses/enrollments/<id>/status`
+- `GET /api/v1/courses/health`
+- `GET /api/v1/courses`
+- `GET /api/v1/courses/<id>`
+- `POST /api/v1/courses`
+- `PUT /api/v1/courses/<id>`
+- `DELETE /api/v1/courses/<id>`
+- `POST /api/v1/courses/<id>/enroll`
+- `GET /api/v1/courses/enrollments/me`
+- `GET /api/v1/courses/<id>/enrollments`
+- `PUT /api/v1/courses/enrollments/<id>/status`
