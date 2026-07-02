@@ -78,6 +78,26 @@ def test_register_success(mock_get_email, mock_create_user, client):
     assert body["role"] == "learner"
     mock_create_user.assert_called_once()
 
+@patch("routes.users.create_user")
+@patch("routes.users.get_user_by_email", return_value=None)
+def test_register_ignores_privileged_role(mock_get_email, mock_create_user, client):
+    mock_create_user.return_value = _sample_user(role="learner")
+
+    response = client.post(
+        "/api/v1/users/register",
+        json={
+            "name": "Mallory Demo",
+            "email": "mallory@example.com",
+            "password": "Password123!",
+            "role": "admin",
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.get_json()["role"] == "learner"
+    mock_create_user.assert_called_once()
+    assert mock_create_user.call_args.args[3] == "learner"    
+
 
 @patch("routes.users.get_user_by_email")
 def test_register_conflict(mock_get_email, client):

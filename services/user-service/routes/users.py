@@ -120,17 +120,7 @@ def register():
     if get_user_by_email(data["email"]):
         return jsonify({"error": "conflict", "message": "Email déjà utilisé"}), 409
 
-    role = data.get("role", "learner")
-    if role not in ALLOWED_ROLES:
-        return (
-            jsonify(
-                {
-                    "error": "bad_request",
-                    "message": f"Role invalide. Valeurs acceptees : {ALLOWED_ROLES}",
-                }
-            ),
-            400,
-        )
+    role = "learner"
     if not EMAIL_RE.match(data["email"]):
         return jsonify({"error": "bad_request", "message": "Format d'email invalide"}), 400
 
