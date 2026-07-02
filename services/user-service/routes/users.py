@@ -132,7 +132,7 @@ def register():
             400,
         )
     if not EMAIL_RE.match(data["email"]):
-     return jsonify({"error": "bad_request", "message": "Format d'email invalide"}), 400
+        return jsonify({"error": "bad_request", "message": "Format d'email invalide"}), 400
 
     hashed = generate_password_hash(data["password"])
     user = create_user(data["name"], data["email"], hashed, role)
@@ -198,10 +198,10 @@ def update_profile(current_user):
     if "name" in data:
         allowed["name"] = data["name"]
     if "email" in data:
-     existing = get_user_by_email(data["email"])
-    if existing and existing["id"] != current_user["id"]:
-        return jsonify({"error": "conflict", "message": "Email déjà utilisé"}), 409
-    allowed["email"] = data["email"]
+        existing = get_user_by_email(data["email"])
+        if existing and existing["id"] != current_user["id"]:
+            return jsonify({"error": "conflict", "message": "Email déjà utilisé"}), 409
+        allowed["email"] = data["email"]
     if "password" in data:
         allowed["password_hash"] = generate_password_hash(data["password"])
 
