@@ -9,8 +9,11 @@ on:
     branches:
       - main
 
-jobs:
+permissions:
+  contents: read
+  packages: write
 
+jobs:
   quality:
     runs-on: ubuntu-latest
 
@@ -23,12 +26,24 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install tools
+      - name: Install dependencies
         run: |
+          pip install --upgrade pip
           pip install flake8 bandit
+          pip install -r services/user-service/requirements.txt
+          pip install -r services/course-service/requirements.txt
+          pip install -r requirements-test.txt
 
-      #- name: Flake8 check
-      # run: flake8 services --max-line-length=200
+      # Flake8 is kept documented but disabled temporarily during MVP stabilization.
+      # Re-enable before final delivery when formatting debt is under control.
+      # - name: Flake8 check
+      #   run: flake8 services tests --max-line-length=120 --extend-ignore=E501,W503
+
+      - name: Pytest user-service
+        run: python -m pytest tests/test_user_routes.py -v
+
+      - name: Pytest course-service
+        run: python -m pytest tests/test_course_routes.py -v
 
       - name: Bandit check
         run: bandit -r services -s B104,B608
@@ -42,46 +57,58 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build user-service
-        run: docker build -f infra/docker/user-service.Dockerfile .
+        run: docker build -f infra/docker/user-service.Dockerfile -t user-service:latest .
 
       - name: Build course-service
-        run: docker build -f infra/docker/course-service.Dockerfile .
+        run: docker build -f infra/docker/course-service.Dockerfile -t course-service:latest .
 
-  docker-push:
+      - name: Run Trivy scan on user-service
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: user-service:latest
+          format: table
+          exit-code: "0"
+          severity: CRITICAL,HIGH
+
+      - name: Run Trivy scan on course-service
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: course-service:latest
+          format: table
+          exit-code: "0"
+          severity: CRITICAL,HIGH
+
+  publish:
     runs-on: ubuntu-latest
     needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Login to Docker Hub
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set version
-        run: echo "VERSION=${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
+      - name: Set image name
+        run: echo "IMAGE_PREFIX=ghcr.io/${{ github.repository_owner }}" >> $GITHUB_ENV
 
-      - name: Build user-service image
+      - name: Build and push user-service
         run: |
           docker build -f infra/docker/user-service.Dockerfile \
-          -t ${{ secrets.DOCKER_USERNAME }}/user-service:${VERSION} \
-          -t ${{ secrets.DOCKER_USERNAME }}/user-service:latest .
+            -t ${{ env.IMAGE_PREFIX }}/user-service:${{ github.run_number }} \
+            -t ${{ env.IMAGE_PREFIX }}/user-service:latest .
+          docker push ${{ env.IMAGE_PREFIX }}/user-service:${{ github.run_number }}
+          docker push ${{ env.IMAGE_PREFIX }}/user-service:latest
 
-      - name: Build course-service image
+      - name: Build and push course-service
         run: |
           docker build -f infra/docker/course-service.Dockerfile \
-          -t ${{ secrets.DOCKER_USERNAME }}/course-service:${VERSION} \
-          -t ${{ secrets.DOCKER_USERNAME }}/course-service:latest .
-
-      - name: Push user-service
-        run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/user-service:${VERSION}
-          docker push ${{ secrets.DOCKER_USERNAME }}/user-service:latest
-
-      - name: Push course-service
-        run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/course-service:${VERSION}
-          docker push ${{ secrets.DOCKER_USERNAME }}/course-service:latest
+            -t ${{ env.IMAGE_PREFIX }}/course-service:${{ github.run_number }} \
+            -t ${{ env.IMAGE_PREFIX }}/course-service:latest .
+          docker push ${{ env.IMAGE_PREFIX }}/course-service:${{ github.run_number }}
+          docker push ${{ env.IMAGE_PREFIX }}/course-service:latest
