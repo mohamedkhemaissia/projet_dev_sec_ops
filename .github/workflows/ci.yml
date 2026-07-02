@@ -63,7 +63,7 @@ jobs:
         run: docker build -f infra/docker/course-service.Dockerfile -t course-service:latest .
 
       - name: Run Trivy scan on user-service
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: user-service:latest
           format: table
@@ -71,7 +71,7 @@ jobs:
           severity: CRITICAL,HIGH
 
       - name: Run Trivy scan on course-service
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: course-service:latest
           format: table
