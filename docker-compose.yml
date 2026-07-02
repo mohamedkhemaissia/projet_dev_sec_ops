@@ -69,6 +69,21 @@ services:
       MYSQL_USER: tms_user
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-tms_password}
       MYSQL_DATABASE: training_platform_db
+
+  # --- FRONTEND REACT/VITE SERVI PAR NGINX ---
+  frontend:
+    build:
+      context: ../traininghub-frontend
+      args:
+        VITE_USER_API_URL: http://localhost:5001/api/v1/users
+        VITE_COURSE_API_URL: http://localhost:5002/api/v1/courses
+    image: traininghub-frontend:latest
+    restart: unless-stopped
+    depends_on:
+      - user-service
+      - course-service
+    ports:
+      - "8080:80"
 # --- VOLUMES DE PERSISTANCE ---
 volumes:
   mysql_data:
