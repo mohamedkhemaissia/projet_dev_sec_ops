@@ -6,6 +6,7 @@ from flask import Blueprint, current_app, g, jsonify, request
 from db.connection import (
     create_course as db_create_course,
     create_enrollment,
+    delete_enrollment,
     delete_course as db_delete_course,
     get_all_courses,
     get_course_by_id,
@@ -213,6 +214,21 @@ def enroll_in_course(course_id):
 
     enrollment = create_enrollment(user_id, course_id)
     return jsonify(enrollment), 201
+
+
+@courses_bp.route("/<int:course_id>/enroll", methods=["DELETE"])
+@jwt_required
+def unenroll_from_course(course_id):
+    course = find_course_by_id(course_id)
+    if course is None:
+        return json_error(404, "not_found", "Course not found")
+
+    user_id = g.current_user["user_id"]
+    deleted_count = delete_enrollment(user_id, course_id)
+    if deleted_count == 0:
+        return json_error(404, "not_found", "Enrollment not found")
+
+    return jsonify({"message": "Enrollment cancelled"}), 200
 
 
 @courses_bp.route("/enrollments/me", methods=["GET"])

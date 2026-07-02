@@ -126,6 +126,13 @@ curl -X POST http://localhost:5002/api/v1/courses/1/enroll ^
   -H "Authorization: Bearer JWT_TOKEN_ICI"
 ```
 
+### Se desinscrire d'une formation
+
+```bash
+curl -X DELETE http://localhost:5002/api/v1/courses/1/enroll ^
+  -H "Authorization: Bearer JWT_TOKEN_ICI"
+```
+
 ### Voir mes inscriptions
 
 ```bash
@@ -167,6 +174,7 @@ Course Service:
 - `PUT /api/v1/courses/<id>`
 - `DELETE /api/v1/courses/<id>`
 - `POST /api/v1/courses/<id>/enroll`
+- `DELETE /api/v1/courses/<id>/enroll`
 - `GET /api/v1/courses/enrollments/me`
 - `GET /api/v1/courses/<id>/enrollments`
 - `PUT /api/v1/courses/enrollments/<id>/status`

@@ -148,6 +148,24 @@ def create_enrollment(user_id, course_id):
     finally:
         connection.close()
 
+
+def delete_enrollment(user_id, course_id):
+    connection = get_connection()
+    try:
+        cursor = connection.cursor()
+        cursor.execute(
+            """
+            DELETE FROM enrollments
+            WHERE user_id = %s AND course_id = %s
+            """,
+            (user_id, course_id),
+        )
+        connection.commit()
+        return cursor.rowcount
+    finally:
+        connection.close()
+
+
 def get_enrollment(user_id, course_id):
     connection = get_connection()
     try:

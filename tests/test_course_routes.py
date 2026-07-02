@@ -124,3 +124,39 @@ def test_enroll_in_course(mock_find_course, mock_get_enrollment, mock_create_enr
 
     assert response.status_code == 201
     assert response.get_json()["status"] == "enrolled"
+
+
+@patch("routes.courses.delete_enrollment")
+@patch("routes.courses.find_course_by_id")
+def test_unenroll_from_course(mock_find_course, mock_delete_enrollment, client):
+    mock_find_course.return_value = _sample_course()
+    mock_delete_enrollment.return_value = 1
+
+    response = client.delete("/api/v1/courses/1/enroll", headers=_auth_headers())
+
+    assert response.status_code == 200
+    assert response.get_json()["message"] == "Enrollment cancelled"
+    mock_delete_enrollment.assert_called_once_with(1, 1)
+
+
+@patch("routes.courses.delete_enrollment")
+@patch("routes.courses.find_course_by_id")
+def test_unenroll_from_course_not_enrolled(mock_find_course, mock_delete_enrollment, client):
+    mock_find_course.return_value = _sample_course()
+    mock_delete_enrollment.return_value = 0
+
+    response = client.delete("/api/v1/courses/1/enroll", headers=_auth_headers())
+
+    assert response.status_code == 404
+
+
+@patch("routes.courses.delete_enrollment")
+@patch("routes.courses.find_course_by_id")
+def test_unenroll_from_missing_course(mock_find_course, mock_delete_enrollment, client):
+    mock_find_course.return_value = None
+
+    response = client.delete("/api/v1/courses/999/enroll", headers=_auth_headers())
+
+    assert response.status_code == 404
+    assert response.get_json()["message"] == "Course not found"
+    mock_delete_enrollment.assert_not_called()
