@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: traininghub
+
+resources:
+  - namespace.yaml
+  - secret.yaml
+  - app-config.yaml
+  - mysql.yaml
+  - user-service.yaml
+  - course-service.yaml
+
+configMapGenerator:
+  - name: mysql-initdb
+    files:
+      - init.sql=init.sql
+
+generatorOptions:
+  disableNameSuffixHash: true

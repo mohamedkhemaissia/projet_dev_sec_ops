@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: traininghub-config
+data:
+  FLASK_DEBUG: "true"
+  JWT_EXPIRES_IN_MINUTES: "60"
+  MYSQL_HOST: mysql
+  MYSQL_PORT: "3306"
+  MYSQL_USER: tms_user
+  MYSQL_DATABASE: training_platform_db
+  DEFAULT_ADMIN_EMAIL: admin@training.com
