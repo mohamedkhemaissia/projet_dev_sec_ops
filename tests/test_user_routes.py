@@ -1,4 +1,5 @@
 import sys
+from io import BytesIO
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
@@ -31,6 +32,7 @@ def _sample_user(**overrides):
         "email": "alice@example.com",
         "password_hash": generate_password_hash("Password123!"),
         "role": "learner",
+        "avatar_url": None,
     }
     user.update(overrides)
     return user
@@ -153,3 +155,38 @@ def test_get_profile(mock_get_user_by_id, client):
 def test_get_profile_without_token(client):
     response = client.get("/api/v1/users/me")
     assert response.status_code == 401
+
+
+@patch("routes.users.update_user")
+@patch("routes.users.get_user_by_id")
+def test_upload_avatar_success(mock_get_user_by_id, mock_update_user, client, tmp_path):
+    mock_get_user_by_id.return_value = _sample_user()
+    mock_update_user.return_value = _sample_user(
+        avatar_url="http://localhost/api/v1/users/uploads/avatars/user-1-demo.png"
+    )
+    client.application.config["UPLOAD_FOLDER"] = str(tmp_path)
+
+    response = client.post(
+        "/api/v1/users/me/avatar",
+        data={"avatar": (BytesIO(b"fake-image-content"), "avatar.png")},
+        headers=_auth_headers(),
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 200
+    assert response.get_json()["avatar_url"].endswith(".png")
+    mock_update_user.assert_called_once()
+
+
+@patch("routes.users.get_user_by_id")
+def test_upload_avatar_rejects_invalid_extension(mock_get_user_by_id, client):
+    mock_get_user_by_id.return_value = _sample_user()
+
+    response = client.post(
+        "/api/v1/users/me/avatar",
+        data={"avatar": (BytesIO(b"fake-content"), "avatar.exe")},
+        headers=_auth_headers(),
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 400

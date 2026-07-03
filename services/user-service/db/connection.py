@@ -38,6 +38,21 @@ def get_connection():
 def row_to_user(row):
     return row if row is not None else None
 
+
+def ensure_users_avatar_column():
+    connection = get_connection()
+    try:
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute("SHOW COLUMNS FROM users LIKE 'avatar_url'")
+        if cursor.fetchone():
+            return
+
+        cursor.execute("ALTER TABLE users ADD COLUMN avatar_url VARCHAR(500) NULL")
+        connection.commit()
+    finally:
+        connection.close()
+
+
 def get_all_users():
     connection = get_connection()
     try:
@@ -90,7 +105,7 @@ def create_user(name, email, password_hash, role="learner"):
         connection.close()
 
 
-def update_user(user_id, name=None, email=None, password_hash=None, role=None):
+def update_user(user_id, name=None, email=None, password_hash=None, role=None, avatar_url=None):
     updates = []
     values = []
 
@@ -106,6 +121,10 @@ def update_user(user_id, name=None, email=None, password_hash=None, role=None):
     if role is not None:
         updates.append("role = %s")
         values.append(role)
+    if avatar_url is not None:
+        ensure_users_avatar_column()
+        updates.append("avatar_url = %s")
+        values.append(avatar_url)
 
     if not updates:
         return get_user_by_id(user_id)

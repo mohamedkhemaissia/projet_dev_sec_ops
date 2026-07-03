@@ -1,7 +1,10 @@
 from datetime import datetime, timezone, timedelta
+import os
+from uuid import uuid4
 import jwt
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, current_app, jsonify, request, send_from_directory
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 from functools import wraps
 import re
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -20,6 +23,7 @@ from config import Config
 
 users_bp = Blueprint("users", __name__, url_prefix="/api/v1/users")
 ALLOWED_ROLES = {"learner", "trainer", "admin"}
+ALLOWED_AVATAR_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 
 # ─── DÉCORATEURS ──────────────────────────────────────────────────────────────
 
@@ -98,6 +102,18 @@ def admin_required(f):
         return f(current_user, *args, **kwargs)
 
     return decorated
+
+
+def allowed_avatar(filename):
+    return (
+        "." in filename
+        and filename.rsplit(".", 1)[1].lower() in ALLOWED_AVATAR_EXTENSIONS
+    )
+
+
+def avatar_url(filename):
+    base_url = request.host_url.rstrip("/")
+    return f"{base_url}/api/v1/users/uploads/avatars/{filename}"
 
 
 # ─── ROUTES PUBLIQUES ─────────────────────────────────────────────────────────
@@ -205,6 +221,50 @@ def update_profile(current_user):
 
     updated = update_user(current_user["id"], **allowed)
     return jsonify(public_user(updated)), 200
+
+
+@users_bp.route("/me/avatar", methods=["POST"])
+@token_required
+def upload_avatar(current_user):
+    if "avatar" not in request.files:
+        return jsonify({"error": "bad_request", "message": "Fichier avatar manquant"}), 400
+
+    file = request.files["avatar"]
+
+    if not file.filename:
+        return jsonify({"error": "bad_request", "message": "Nom de fichier manquant"}), 400
+
+    if not allowed_avatar(file.filename):
+        return (
+            jsonify(
+                {
+                    "error": "bad_request",
+                    "message": "Formats acceptes : jpg, jpeg, png, webp",
+                }
+            ),
+            400,
+        )
+
+    if file.mimetype and not file.mimetype.startswith("image/"):
+        return jsonify({"error": "bad_request", "message": "Le fichier doit etre une image"}), 400
+
+    upload_folder = current_app.config["UPLOAD_FOLDER"]
+    os.makedirs(upload_folder, exist_ok=True)
+
+    original_filename = secure_filename(file.filename)
+    extension = original_filename.rsplit(".", 1)[1].lower()
+    stored_filename = f"user-{current_user['id']}-{uuid4().hex}.{extension}"
+    destination = os.path.join(upload_folder, stored_filename)
+
+    file.save(destination)
+
+    updated = update_user(current_user["id"], avatar_url=avatar_url(stored_filename))
+    return jsonify(public_user(updated)), 200
+
+
+@users_bp.route("/uploads/avatars/<path:filename>", methods=["GET"])
+def get_avatar(filename):
+    return send_from_directory(current_app.config["UPLOAD_FOLDER"], filename)
 
 
 # ─── ROUTES ADMIN ─────────────────────────────────────────────────────────────
