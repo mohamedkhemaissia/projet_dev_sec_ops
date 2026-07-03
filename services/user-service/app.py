@@ -4,6 +4,7 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from routes.users import users_bp
 from config import Config
+from db.connection import ensure_default_admin
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -44,4 +45,5 @@ def create_app():
 
 if __name__ == "__main__":
     app = create_app()
+    ensure_default_admin()
     app.run(host="0.0.0.0", port=5001, debug=Config.DEBUG)

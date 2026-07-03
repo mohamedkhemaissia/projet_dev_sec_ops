@@ -53,6 +53,26 @@ def ensure_users_avatar_column():
         connection.close()
 
 
+def ensure_default_admin():
+    ensure_users_avatar_column()
+
+    admin = get_user_by_email(DEFAULT_ADMIN_EMAIL)
+    if admin:
+        update_user(
+            admin["id"],
+            password_hash=generate_password_hash(DEFAULT_ADMIN_PASSWORD),
+            role="admin",
+        )
+        return
+
+    create_user(
+        "TrainingHub Admin",
+        DEFAULT_ADMIN_EMAIL,
+        generate_password_hash(DEFAULT_ADMIN_PASSWORD),
+        "admin",
+    )
+
+
 def get_all_users():
     connection = get_connection()
     try:

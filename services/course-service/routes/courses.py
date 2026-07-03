@@ -204,6 +204,9 @@ def delete_course(course_id):
 @courses_bp.route("/<int:course_id>/enroll", methods=["POST"])
 @jwt_required
 def enroll_in_course(course_id):
+    if g.current_user.get("role") == "admin":
+        return json_error(403, "forbidden", "Admins cannot enroll in courses")
+
     course = find_course_by_id(course_id)
     if course is None:
         return json_error(404, "not_found", "Course not found")
