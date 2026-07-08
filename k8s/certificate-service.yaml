@@ -1,26 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: user-service
+  name: certificate-service
   namespace: traininghub
   labels:
-    app: user-service
+    app: certificate-service
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: user-service
+      app: certificate-service
   template:
     metadata:
       labels:
-        app: user-service
+        app: certificate-service
     spec:
       containers:
-        - name: user-service
-          image: user-service:latest
+        - name: certificate-service
+          image: certificate-service:latest
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 5001
+            - containerPort: 5004
           envFrom:
             - configMapRef:
                 name: traininghub-config
@@ -28,16 +28,16 @@ spec:
                 name: traininghub-secrets
           readinessProbe:
             httpGet:
-              path: /api/v1/users/health
-              port: 5001
+              path: /api/v1/certificates/health
+              port: 5004
             initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 3
             failureThreshold: 12
           livenessProbe:
             httpGet:
-              path: /api/v1/users/health
-              port: 5001
+              path: /api/v1/certificates/health
+              port: 5004
             initialDelaySeconds: 30
             periodSeconds: 20
             timeoutSeconds: 3
@@ -53,15 +53,15 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: user-service
+  name: certificate-service
   namespace: traininghub
   labels:
-    app: user-service
+    app: certificate-service
 spec:
   type: ClusterIP
   selector:
-    app: user-service
+    app: certificate-service
   ports:
     - name: http
-      port: 5001
-      targetPort: 5001
+      port: 5004
+      targetPort: 5004

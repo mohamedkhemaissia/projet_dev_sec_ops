@@ -10,6 +10,7 @@ resources:
   - mysql.yaml
   - user-service.yaml
   - course-service.yaml
+  - certificate-service.yaml
 
 configMapGenerator:
   - name: mysql-initdb

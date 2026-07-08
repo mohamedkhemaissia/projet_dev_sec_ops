@@ -32,6 +32,7 @@ jobs:
           pip install flake8 bandit
           pip install -r services/user-service/requirements.txt
           pip install -r services/course-service/requirements.txt
+          pip install -r services/certificate-service/requirements.txt
           pip install -r requirements-test.txt
 
       # Flake8 is kept documented but disabled temporarily during MVP stabilization.
@@ -44,6 +45,9 @@ jobs:
 
       - name: Pytest course-service
         run: python -m pytest tests/test_course_routes.py -v
+
+      - name: Pytest certificate-service
+        run: python -m pytest tests/test_certificate_routes.py -v
 
       - name: Bandit check
         run: bandit -r services -s B104,B608
@@ -62,6 +66,9 @@ jobs:
       - name: Build course-service
         run: docker build -f infra/docker/course-service.Dockerfile -t course-service:latest .
 
+      - name: Build certificate-service
+        run: docker build -f infra/docker/certificate-service.Dockerfile -t certificate-service:latest .
+
       - name: Run Trivy scan on user-service
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -74,6 +81,14 @@ jobs:
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: course-service:latest
+          format: table
+          exit-code: "0"
+          severity: CRITICAL,HIGH
+
+      - name: Run Trivy scan on certificate-service
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: certificate-service:latest
           format: table
           exit-code: "0"
           severity: CRITICAL,HIGH
@@ -112,3 +127,11 @@ jobs:
             -t ${{ env.IMAGE_PREFIX }}/course-service:latest .
           docker push ${{ env.IMAGE_PREFIX }}/course-service:${{ github.run_number }}
           docker push ${{ env.IMAGE_PREFIX }}/course-service:latest
+
+      - name: Build and push certificate-service
+        run: |
+          docker build -f infra/docker/certificate-service.Dockerfile \
+            -t ${{ env.IMAGE_PREFIX }}/certificate-service:${{ github.run_number }} \
+            -t ${{ env.IMAGE_PREFIX }}/certificate-service:latest .
+          docker push ${{ env.IMAGE_PREFIX }}/certificate-service:${{ github.run_number }}
+          docker push ${{ env.IMAGE_PREFIX }}/certificate-service:latest

@@ -2,10 +2,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: course-service
+  namespace: traininghub
   labels:
     app: course-service
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: course-service
@@ -41,11 +42,19 @@ spec:
             periodSeconds: 20
             timeoutSeconds: 3
             failureThreshold: 6
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: course-service
+  namespace: traininghub
   labels:
     app: course-service
 spec:

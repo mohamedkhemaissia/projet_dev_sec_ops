@@ -72,20 +72,27 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-tms_password}
       MYSQL_DATABASE: training_platform_db
 
-  # --- FRONTEND REACT/VITE SERVI PAR NGINX ---
-  frontend:
+  # --- MICROSERVICE CERTIFICATS ---
+  certificate-service:
     build:
-      context: ../traininghub-frontend
-      args:
-        VITE_USER_API_URL: http://localhost:5001/api/v1/users
-        VITE_COURSE_API_URL: http://localhost:5002/api/v1/courses
-    image: traininghub-frontend:latest
+      context: .
+      dockerfile: infra/docker/certificate-service.Dockerfile
+    image: certificate-service:latest
     restart: unless-stopped
     depends_on:
-      - user-service
-      - course-service
+      mysql:
+        condition: service_healthy
     ports:
-      - "8080:80"
+      - "5004:5004"
+    environment:
+      FLASK_DEBUG: "true"
+      SECRET_KEY: ${SECRET_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: tms_user
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-tms_password}
+      MYSQL_DATABASE: training_platform_db
 # --- VOLUMES DE PERSISTANCE ---
 volumes:
   mysql_data:

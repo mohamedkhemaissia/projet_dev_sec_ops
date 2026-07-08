@@ -14,6 +14,7 @@ Construire les images locales :
 ```powershell
 docker build -f infra/docker/user-service.Dockerfile -t user-service:latest .
 docker build -f infra/docker/course-service.Dockerfile -t course-service:latest .
+docker build -f infra/docker/certificate-service.Dockerfile -t certificate-service:latest .
 ```
 
 Deployer :
@@ -28,6 +29,7 @@ Exposer les APIs en local :
 ```powershell
 kubectl port-forward -n traininghub service/user-service 5001:5001
 kubectl port-forward -n traininghub service/course-service 5002:5002
+kubectl port-forward -n traininghub service/certificate-service 5004:5004
 ```
 
 Tester :
@@ -35,6 +37,7 @@ Tester :
 ```powershell
 curl http://localhost:5001/api/v1/users/health
 curl http://localhost:5002/api/v1/courses/health
+curl http://localhost:5004/api/v1/certificates/health
 ```
 
 ## Option 2 - Minikube
@@ -50,6 +53,7 @@ Construire les images directement dans l'environnement Docker de Minikube :
 ```powershell
 minikube image build -f infra/docker/user-service.Dockerfile -t user-service:latest .
 minikube image build -f infra/docker/course-service.Dockerfile -t course-service:latest .
+minikube image build -f infra/docker/certificate-service.Dockerfile -t certificate-service:latest .
 ```
 
 Deployer :
@@ -65,6 +69,7 @@ kubectl get pods -n traininghub
 kubectl get all -n traininghub
 kubectl logs -n traininghub deployment/user-service
 kubectl logs -n traininghub deployment/course-service
+kubectl logs -n traininghub deployment/certificate-service
 kubectl describe pod -n traininghub -l app=mysql
 ```
 

@@ -40,4 +40,16 @@ CREATE TABLE IF NOT EXISTS enrollments (
     FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS certificates (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    course_id INT NOT NULL,
+    certificate_code VARCHAR(100) NOT NULL UNIQUE,
+    status ENUM('active', 'revoked') NOT NULL DEFAULT 'active',
+    issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_user_course_certificate (user_id, course_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+);
+
 FLUSH PRIVILEGES;

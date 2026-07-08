@@ -1,5 +1,6 @@
 import os
 import time
+
 import mysql.connector
 from mysql.connector import Error
 
@@ -30,6 +31,7 @@ def get_connection():
 
 def row_to_course(row):
     return row if row is not None else None
+
 
 def get_all_courses():
     connection = get_connection()
@@ -181,6 +183,7 @@ def get_enrollment(user_id, course_id):
     finally:
         connection.close()
 
+
 def get_enrollments_by_user(user_id):
     connection = get_connection()
     try:
@@ -198,6 +201,7 @@ def get_enrollments_by_user(user_id):
         return cursor.fetchall()
     finally:
         connection.close()
+
 
 def get_enrollments_by_course(course_id):
     connection = get_connection()
@@ -228,17 +232,15 @@ def update_enrollment_status(enrollment_id, status):
             SET status = %s,
                 completed_at = CASE
                     WHEN %s = 'completed' THEN CURRENT_TIMESTAMP
+                    WHEN %s != 'completed' THEN NULL
                     ELSE completed_at
                 END
             WHERE id = %s
             """,
-            (status, status, enrollment_id),
+            (status, status, status, enrollment_id),
         )
         connection.commit()
         cursor.execute("SELECT * FROM enrollments WHERE id = %s", (enrollment_id,))
         return cursor.fetchone()
     finally:
         connection.close()
-
-
-# init_db()

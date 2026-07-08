@@ -2,6 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: traininghub-config
+  namespace: traininghub
 data:
   FLASK_DEBUG: "true"
   JWT_EXPIRES_IN_MINUTES: "60"
