@@ -25,7 +25,6 @@ Tables principales:
 Roles applicatifs:
 
 - `admin`
-- `trainer`
 - `learner`
 
 Flux principal:
@@ -34,7 +33,7 @@ Flux principal:
 2. `user-service` retourne un JWT.
 3. Le client Postman envoie le JWT dans `Authorization: Bearer JWT_TOKEN`.
 4. `course-service` protege les cours et les inscriptions avec le JWT.
-5. Un admin ou trainer marque une inscription comme `completed`.
+5. Un admin marque une inscription comme `completed`.
 6. Le learner demande son certificat via `certificate-service`.
 7. Le certificat peut etre verifie publiquement avec son code.
 
@@ -113,7 +112,7 @@ Ou les valeurs definies dans `.env`.
 
 ### 5. Creer une formation
 
-Cette route demande un token `admin` ou `trainer`.
+Cette route demande un token `admin`.
 
 ```bash
 curl -X POST http://localhost:5002/api/v1/courses ^
@@ -138,7 +137,7 @@ curl -X POST http://localhost:5002/api/v1/courses/1/enroll ^
 
 ### 8. Voir les inscriptions du cours
 
-Cette route demande un token `admin` ou `trainer`.
+Cette route demande un token `admin`.
 
 ```bash
 curl -X GET http://localhost:5002/api/v1/courses/1/enrollments ^
@@ -149,7 +148,7 @@ Recuperer l'`id` de l'inscription dans la reponse.
 
 ### 9. Marquer l'inscription comme terminee
 
-Cette route demande un token `admin` ou `trainer`.
+Cette route demande un token `admin`.
 
 ```bash
 curl -X PUT http://localhost:5002/api/v1/courses/enrollments/1/status ^

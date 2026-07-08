@@ -22,7 +22,7 @@ from models.user import public_user
 from config import Config
 
 users_bp = Blueprint("users", __name__, url_prefix="/api/v1/users")
-ALLOWED_ROLES = {"learner", "trainer", "admin"}
+ALLOWED_ROLES = {"learner", "admin"}
 ALLOWED_AVATAR_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 
 # ─── DÉCORATEURS ──────────────────────────────────────────────────────────────

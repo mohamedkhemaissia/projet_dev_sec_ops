@@ -31,7 +31,6 @@ def _sample_course(**overrides):
         "duration": 24.0,
         "level": "beginner",
         "category": "DevSecOps",
-        "trainer_id": 2,
     }
     course.update(overrides)
     return course

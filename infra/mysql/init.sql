@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
-    role ENUM('admin', 'trainer', 'learner') NOT NULL DEFAULT 'learner',
+    role ENUM('admin', 'learner') NOT NULL DEFAULT 'learner',
     avatar_url VARCHAR(500) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -23,9 +23,7 @@ CREATE TABLE IF NOT EXISTS courses (
     duration DOUBLE NOT NULL,
     level ENUM('beginner', 'intermediate', 'advanced') DEFAULT 'beginner',
     category VARCHAR(100) NOT NULL,
-    trainer_id INT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (trainer_id) REFERENCES users(id) ON DELETE SET NULL
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS enrollments (

@@ -55,16 +55,16 @@ def get_course_by_id(course_id):
         connection.close()
 
 
-def create_course(title, description, duration, level, category, trainer_id):
+def create_course(title, description, duration, level, category):
     connection = get_connection()
     try:
         cursor = connection.cursor(dictionary=True)
         cursor.execute(
             """
-            INSERT INTO courses (title, description, duration, level, category, trainer_id)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO courses (title, description, duration, level, category)
+            VALUES (%s, %s, %s, %s, %s)
             """,
-            (title, description, duration, level, category, trainer_id),
+            (title, description, duration, level, category),
         )
         connection.commit()
         cursor.execute("SELECT * FROM courses WHERE id = %s", (cursor.lastrowid,))
@@ -81,7 +81,6 @@ def update_course(
     duration=None,
     level=None,
     category=None,
-    trainer_id=None,
 ):
     updates = []
     values = []
@@ -101,10 +100,6 @@ def update_course(
     if category is not None:
         updates.append("category = %s")
         values.append(category)
-    if trainer_id is not None:
-        updates.append("trainer_id = %s")
-        values.append(trainer_id)
-
     if not updates:
         return get_course_by_id(course_id)
 

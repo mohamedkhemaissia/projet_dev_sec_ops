@@ -71,14 +71,14 @@ def jwt_required(fn):
     return wrapper
 
 
-def trainer_or_admin_required(fn):
+def admin_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
         payload, error_response = decode_token_from_request()
         if error_response:
             return error_response
-        if payload.get("role") not in {"admin", "trainer"}:
-            return json_error(403, "forbidden", "Trainer or admin privileges required")
+        if payload.get("role") != "admin":
+            return json_error(403, "forbidden", "Admin privileges required")
         g.current_user = payload
         return fn(*args, **kwargs)
 
@@ -106,7 +106,7 @@ def get_course(course_id):
 
 
 @courses_bp.route("", methods=["POST"])
-@trainer_or_admin_required
+@admin_required
 def create_course():
     data, error_response = get_json_body()
     if error_response:
@@ -117,7 +117,6 @@ def create_course():
     duration = data.get("duration")
     level = data.get("level", "beginner")
     category = data.get("category")
-    trainer_id = data.get("trainer_id", g.current_user.get("user_id"))
 
     if not title or not description or duration is None or not category:
         return json_error(
@@ -143,13 +142,12 @@ def create_course():
         duration_value,
         level,
         category,
-        trainer_id,
     )
     return jsonify({"course": course, "created_by": g.current_user.get("email")}), 201
 
 
 @courses_bp.route("/<int:course_id>", methods=["PUT"])
-@trainer_or_admin_required
+@admin_required
 def update_course(course_id):
     course = find_course_by_id(course_id)
     if course is None:
@@ -169,8 +167,6 @@ def update_course(course_id):
         course["level"] = data["level"]
     if "category" in data and data["category"]:
         course["category"] = data["category"]
-    if "trainer_id" in data:
-        course["trainer_id"] = data["trainer_id"]
     if "duration" in data:
         try:
             duration_value = float(data["duration"])
@@ -187,13 +183,12 @@ def update_course(course_id):
         duration=course.get("duration"),
         level=course.get("level"),
         category=course.get("category"),
-        trainer_id=course.get("trainer_id"),
     )
     return jsonify(updated_course), 200
 
 
 @courses_bp.route("/<int:course_id>", methods=["DELETE"])
-@trainer_or_admin_required
+@admin_required
 def delete_course(course_id):
     deleted_count = db_delete_course(course_id)
     if deleted_count == 0:
@@ -241,7 +236,7 @@ def get_my_enrollments():
 
 
 @courses_bp.route("/<int:course_id>/enrollments", methods=["GET"])
-@trainer_or_admin_required
+@admin_required
 def get_course_enrollments(course_id):
     course = find_course_by_id(course_id)
     if course is None:
@@ -250,7 +245,7 @@ def get_course_enrollments(course_id):
 
 
 @courses_bp.route("/enrollments/<int:enrollment_id>/status", methods=["PUT"])
-@trainer_or_admin_required
+@admin_required
 def change_enrollment_status(enrollment_id):
     data, error_response = get_json_body()
     if error_response:
