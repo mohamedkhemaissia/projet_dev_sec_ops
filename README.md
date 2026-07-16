@@ -10,8 +10,17 @@ Le monorepo contient trois microservices Python/Flask et une base MySQL unique:
 - `certificate-service`: emission et verification des certificats.
 - `mysql`: base unique `training_platform_db`.
 
-La partie frontend et le chatbot ne font plus partie du perimetre de livraison.
+La partie frontend, le chatbot et les avatars ne font plus partie du perimetre de livraison.
 La demonstration fonctionnelle se fait avec Postman.
+
+## Securite applicative
+
+- JWT avec expiration, emetteur, audience et claims obligatoires.
+- Autorisations explicites pour les roles `admin` et `learner`.
+- Validation et normalisation des entrees JSON.
+- Mots de passe de 12 a 128 caracteres avec lettres, chiffre et caractere special.
+- CORS configurable et en-tetes HTTP de securite.
+- Protection contre l'acces aux certificats d'un autre learner.
 
 ## Architecture
 
@@ -179,6 +188,16 @@ curl -X GET http://localhost:5004/api/v1/certificates/me ^
 curl -X GET http://localhost:5004/api/v1/certificates/verify/TH-CODE_ICI
 ```
 
+### 13. Telecharger un certificat PDF
+
+Cette route demande le token du learner proprietaire du certificat ou un token admin.
+
+```bash
+curl -X GET http://localhost:5004/api/v1/certificates/1/download ^
+  -H "Authorization: Bearer LEARNER_JWT_TOKEN" ^
+  -o certificat.pdf
+```
+
 ## Endpoints principaux
 
 User Service:
@@ -188,7 +207,6 @@ User Service:
 - `POST /api/v1/users/login`
 - `GET /api/v1/users/me`
 - `PUT /api/v1/users/me`
-- `POST /api/v1/users/me/avatar`
 - `GET /api/v1/users/`
 - `GET /api/v1/users/<id>`
 - `PUT /api/v1/users/<id>`
@@ -214,6 +232,7 @@ Certificate Service:
 - `POST /api/v1/certificates/courses/<course_id>/issue`
 - `GET /api/v1/certificates/me`
 - `GET /api/v1/certificates/<id>`
+- `GET /api/v1/certificates/<id>/download`
 - `GET /api/v1/certificates/verify/<code>`
 
 ## Pipeline CI/CD
@@ -221,7 +240,7 @@ Certificate Service:
 A chaque push sur `main` ou `develop`, GitHub Actions execute:
 
 1. Pytest + Bandit
-2. Build Docker + scan Trivy
+2. Build Docker + scan Docker Scout des vulnerabilites critiques et hautes corrigibles
 3. Push des images vers ghcr.io sur `main`
 
 Images construites:
