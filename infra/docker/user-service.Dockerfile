@@ -12,5 +12,11 @@ COPY services/user-service .
 
 ENV FLASK_APP=app.py
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+RUN groupadd --system app \
+    && useradd --system --gid app --no-create-home app
+
+USER app
 
 CMD ["python", "app.py"]
