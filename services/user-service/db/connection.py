@@ -39,23 +39,7 @@ def row_to_user(row):
     return row if row is not None else None
 
 
-def ensure_users_avatar_column():
-    connection = get_connection()
-    try:
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("SHOW COLUMNS FROM users LIKE 'avatar_url'")
-        if cursor.fetchone():
-            return
-
-        cursor.execute("ALTER TABLE users ADD COLUMN avatar_url VARCHAR(500) NULL")
-        connection.commit()
-    finally:
-        connection.close()
-
-
 def ensure_default_admin():
-    ensure_users_avatar_column()
-
     admin = get_user_by_email(DEFAULT_ADMIN_EMAIL)
     if admin:
         update_user(
@@ -125,36 +109,30 @@ def create_user(name, email, password_hash, role="learner"):
         connection.close()
 
 
-def update_user(user_id, name=None, email=None, password_hash=None, role=None, avatar_url=None):
-    updates = []
-    values = []
-
-    if name is not None:
-        updates.append("name = %s")
-        values.append(name)
-    if email is not None:
-        updates.append("email = %s")
-        values.append(email)
-    if password_hash is not None:
-        updates.append("password_hash = %s")
-        values.append(password_hash)
-    if role is not None:
-        updates.append("role = %s")
-        values.append(role)
-    if avatar_url is not None:
-        ensure_users_avatar_column()
-        updates.append("avatar_url = %s")
-        values.append(avatar_url)
-
-    if not updates:
+def update_user(
+    user_id,
+    name=None,
+    email=None,
+    password_hash=None,
+    role=None,
+):
+    if all(value is None for value in (name, email, password_hash, role)):
         return get_user_by_id(user_id)
-
-    values.append(user_id)
 
     connection = get_connection()
     try:
         cursor = connection.cursor(dictionary=True)
-        cursor.execute(f"UPDATE users SET {', '.join(updates)} WHERE id = %s", values)
+        cursor.execute(
+            """
+            UPDATE users
+            SET name = COALESCE(%s, name),
+                email = COALESCE(%s, email),
+                password_hash = COALESCE(%s, password_hash),
+                role = COALESCE(%s, role)
+            WHERE id = %s
+            """,
+            (name, email, password_hash, role, user_id),
+        )
         connection.commit()
         cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
         row = cursor.fetchone()

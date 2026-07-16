@@ -82,33 +82,24 @@ def update_course(
     level=None,
     category=None,
 ):
-    updates = []
-    values = []
-
-    if title is not None:
-        updates.append("title = %s")
-        values.append(title)
-    if description is not None:
-        updates.append("description = %s")
-        values.append(description)
-    if duration is not None:
-        updates.append("duration = %s")
-        values.append(duration)
-    if level is not None:
-        updates.append("level = %s")
-        values.append(level)
-    if category is not None:
-        updates.append("category = %s")
-        values.append(category)
-    if not updates:
+    if all(value is None for value in (title, description, duration, level, category)):
         return get_course_by_id(course_id)
-
-    values.append(course_id)
 
     connection = get_connection()
     try:
         cursor = connection.cursor(dictionary=True)
-        cursor.execute(f"UPDATE courses SET {', '.join(updates)} WHERE id = %s", values)
+        cursor.execute(
+            """
+            UPDATE courses
+            SET title = COALESCE(%s, title),
+                description = COALESCE(%s, description),
+                duration = COALESCE(%s, duration),
+                level = COALESCE(%s, level),
+                category = COALESCE(%s, category)
+            WHERE id = %s
+            """,
+            (title, description, duration, level, category, course_id),
+        )
         connection.commit()
         cursor.execute("SELECT * FROM courses WHERE id = %s", (course_id,))
         row = cursor.fetchone()
