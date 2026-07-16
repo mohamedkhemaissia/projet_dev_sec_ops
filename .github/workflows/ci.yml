@@ -50,7 +50,7 @@ jobs:
         run: python -m pytest tests/test_certificate_routes.py -v
 
       - name: Bandit check
-        run: bandit -r services -s B104,B608
+        run: bandit -r services
 
   build:
     runs-on: ubuntu-latest
