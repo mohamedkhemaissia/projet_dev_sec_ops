@@ -11,9 +11,16 @@ sys.path.insert(0, os.path.dirname(__file__))
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
-    CORS(app, resources={r"/*": {"origins": "*"}})
+    CORS(app, resources={r"/*": {"origins": app.config["CORS_ORIGINS"]}})
 
     app.register_blueprint(courses_bp)
+
+    @app.after_request
+    def add_security_headers(response):
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        return response
 
     @app.errorhandler(400)
     def bad_request(error):
@@ -44,4 +51,4 @@ def create_app():
 
 if __name__ == "__main__":
     app = create_app()
-    app.run(host="0.0.0.0", port=5002, debug=Config.DEBUG)
+    app.run(host=Config.HOST, port=5002, debug=Config.DEBUG)
