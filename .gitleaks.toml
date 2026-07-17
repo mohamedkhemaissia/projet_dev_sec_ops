@@ -1,0 +1,14 @@
+title = "TrainingHub Gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "curl-auth-header"
+
+  [[rules.allowlists]]
+  description = "Ignore documented JWT placeholders in README examples"
+  regexTarget = "secret"
+  regexes = [
+    '''^((ADMIN|LEARNER)_JWT_TOKEN|JWT_TOKEN_ICI)$'''
+  ]
