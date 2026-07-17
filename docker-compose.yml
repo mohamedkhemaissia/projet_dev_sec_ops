@@ -30,13 +30,20 @@ services:
       dockerfile: infra/docker/user-service.Dockerfile
     image: user-service:latest
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     depends_on:
       mysql:
         condition: service_healthy
     ports:
       - "5001:5001"
     environment:
-      FLASK_DEBUG: "true"
+      FLASK_DEBUG: "false"
       APP_HOST: "0.0.0.0"
       SECRET_KEY: ${SECRET_KEY}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
@@ -55,13 +62,20 @@ services:
       dockerfile: infra/docker/course-service.Dockerfile
     image: course-service:latest
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     depends_on:
       mysql:
         condition: service_healthy
     ports:
       - "5002:5002"
     environment:
-      FLASK_DEBUG: "true"
+      FLASK_DEBUG: "false"
       APP_HOST: "0.0.0.0"
       SECRET_KEY: ${SECRET_KEY} 
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
@@ -78,13 +92,20 @@ services:
       dockerfile: infra/docker/certificate-service.Dockerfile
     image: certificate-service:latest
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     depends_on:
       mysql:
         condition: service_healthy
     ports:
       - "5004:5004"
     environment:
-      FLASK_DEBUG: "true"
+      FLASK_DEBUG: "false"
       APP_HOST: "0.0.0.0"
       SECRET_KEY: ${SECRET_KEY}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
