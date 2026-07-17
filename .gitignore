@@ -9,3 +9,4 @@ instance/
 *.log
 mysql_data/
 .env
+/certificat-demo.pdf

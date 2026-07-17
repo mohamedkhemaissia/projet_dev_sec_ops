@@ -36,14 +36,20 @@ def _sample_course(**overrides):
     return course
 
 
-def _auth_headers(role="learner", user_id=1):
+def _auth_headers(role="learner", user_id=1, **overrides):
+    issued_at = datetime.now(tz=timezone.utc)
+    payload = {
+        "user_id": user_id,
+        "email": "user@example.com",
+        "role": role,
+        "iat": issued_at,
+        "exp": issued_at + timedelta(minutes=60),
+        "iss": Config.JWT_ISSUER,
+        "aud": Config.JWT_AUDIENCE,
+    }
+    payload.update(overrides)
     token = jwt.encode(
-        {
-            "user_id": user_id,
-            "email": "user@example.com",
-            "role": role,
-            "exp": datetime.now(tz=timezone.utc) + timedelta(minutes=60),
-        },
+        payload,
         Config.JWT_SECRET_KEY,
         algorithm=Config.JWT_ALGORITHM,
     )
@@ -68,6 +74,26 @@ def test_list_courses(mock_get_all_courses, client):
 
 def test_list_courses_without_token(client):
     response = client.get("/api/v1/courses")
+    assert response.status_code == 401
+
+
+def test_list_courses_rejects_expired_token(client):
+    response = client.get(
+        "/api/v1/courses",
+        headers=_auth_headers(
+            exp=datetime.now(tz=timezone.utc) - timedelta(minutes=1),
+        ),
+    )
+
+    assert response.status_code == 401
+
+
+def test_list_courses_rejects_unknown_role(client):
+    response = client.get(
+        "/api/v1/courses",
+        headers=_auth_headers(role="superadmin"),
+    )
+
     assert response.status_code == 401
 
 
@@ -105,6 +131,41 @@ def test_create_course_forbidden_for_learner(client):
     )
 
     assert response.status_code == 403
+
+
+@patch("routes.courses.db_create_course")
+def test_create_course_rejects_unknown_field(mock_create_course, client):
+    response = client.post(
+        "/api/v1/courses",
+        headers=_auth_headers(role="admin", user_id=2),
+        json={
+            "title": "DevSecOps Fundamentals",
+            "description": "Introduction to secure delivery pipelines",
+            "duration": 24,
+            "category": "DevSecOps",
+            "owner_id": 1,
+        },
+    )
+
+    assert response.status_code == 400
+    mock_create_course.assert_not_called()
+
+
+@patch("routes.courses.db_create_course")
+def test_create_course_rejects_invalid_duration(mock_create_course, client):
+    response = client.post(
+        "/api/v1/courses",
+        headers=_auth_headers(role="admin", user_id=2),
+        json={
+            "title": "DevSecOps Fundamentals",
+            "description": "Introduction to secure delivery pipelines",
+            "duration": True,
+            "category": "DevSecOps",
+        },
+    )
+
+    assert response.status_code == 400
+    mock_create_course.assert_not_called()
 
 
 @patch("routes.courses.create_enrollment")
@@ -159,3 +220,25 @@ def test_unenroll_from_missing_course(mock_find_course, mock_delete_enrollment, 
     assert response.status_code == 404
     assert response.get_json()["message"] == "Course not found"
     mock_delete_enrollment.assert_not_called()
+
+
+@patch("routes.courses.delete_enrollment")
+def test_admin_cannot_unenroll_from_course(mock_delete_enrollment, client):
+    response = client.delete(
+        "/api/v1/courses/1/enroll",
+        headers=_auth_headers(role="admin", user_id=2),
+    )
+
+    assert response.status_code == 403
+    mock_delete_enrollment.assert_not_called()
+
+
+@patch("routes.courses.get_enrollments_by_user")
+def test_admin_cannot_list_personal_enrollments(mock_get_enrollments, client):
+    response = client.get(
+        "/api/v1/courses/enrollments/me",
+        headers=_auth_headers(role="admin", user_id=2),
+    )
+
+    assert response.status_code == 403
+    mock_get_enrollments.assert_not_called()

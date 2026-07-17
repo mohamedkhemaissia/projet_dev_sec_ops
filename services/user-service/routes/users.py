@@ -1,14 +1,11 @@
-from datetime import datetime, timezone, timedelta
-import os
-from uuid import uuid4
-import jwt
-from flask import Blueprint, current_app, jsonify, request, send_from_directory
-from werkzeug.security import generate_password_hash, check_password_hash
-from werkzeug.utils import secure_filename
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 import re
-EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+from uuid import uuid4
 
+import jwt
+from flask import Blueprint, current_app, jsonify, request
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from db.connection import (
     create_user,
@@ -23,9 +20,123 @@ from config import Config
 
 users_bp = Blueprint("users", __name__, url_prefix="/api/v1/users")
 ALLOWED_ROLES = {"learner", "admin"}
-ALLOWED_AVATAR_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
+JWT_REQUIRED_CLAIMS = ["exp", "iat", "iss", "aud", "user_id", "email", "role"]
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+REGISTER_FIELDS = {"name", "email", "password"}
+PROFILE_FIELDS = {"name", "email", "password"}
+ADMIN_UPDATE_FIELDS = {"name", "role", "password"}
+MIN_PASSWORD_LENGTH = 12
+MAX_PASSWORD_LENGTH = 128
+
+
+def json_error(status_code, error, message):
+    return jsonify({"error": error, "message": message}), status_code
+
+
+def get_json_object():
+    if not request.is_json:
+        return None, json_error(400, "bad_request", "JSON body required")
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return None, json_error(400, "bad_request", "JSON object required")
+    return payload, None
+
+
+def reject_unknown_fields(data, allowed_fields):
+    unknown_fields = sorted(set(data) - allowed_fields)
+    if unknown_fields:
+        return json_error(
+            400,
+            "bad_request",
+            f"Unknown fields: {', '.join(unknown_fields)}",
+        )
+    return None
+
+
+def validate_name(value):
+    if not isinstance(value, str):
+        return None, "name must be a string"
+    name = value.strip()
+    if not 2 <= len(name) <= 100:
+        return None, "name must contain between 2 and 100 characters"
+    return name, None
+
+
+def validate_email(value):
+    if not isinstance(value, str):
+        return None, "email must be a string"
+    email = value.strip().lower()
+    if len(email) > 254 or not EMAIL_RE.fullmatch(email):
+        return None, "Invalid email format"
+    return email, None
+
+
+def validate_password(value):
+    if not isinstance(value, str):
+        return "password must be a string"
+    if not MIN_PASSWORD_LENGTH <= len(value) <= MAX_PASSWORD_LENGTH:
+        return "password must contain between 12 and 128 characters"
+    if not re.search(r"[a-z]", value) or not re.search(r"[A-Z]", value):
+        return "password must contain upper and lower case letters"
+    if not re.search(r"\d", value) or not re.search(r"[^A-Za-z0-9]", value):
+        return "password must contain a digit and a special character"
+    return None
 
 # ─── DÉCORATEURS ──────────────────────────────────────────────────────────────
+
+
+def decode_current_user():
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return None, (
+            jsonify({"error": "unauthorized", "message": "Bearer token requis"}),
+            401,
+        )
+
+    token = auth_header.split(" ", 1)[1].strip()
+    if not token:
+        return None, (
+            jsonify({"error": "unauthorized", "message": "Bearer token requis"}),
+            401,
+        )
+
+    try:
+        data = jwt.decode(
+            token,
+            current_app.config["JWT_SECRET_KEY"],
+            algorithms=[current_app.config["JWT_ALGORITHM"]],
+            issuer=current_app.config["JWT_ISSUER"],
+            audience=current_app.config["JWT_AUDIENCE"],
+            options={"require": JWT_REQUIRED_CLAIMS},
+        )
+    except jwt.ExpiredSignatureError:
+        return None, (
+            jsonify({"error": "unauthorized", "message": "Token expire"}),
+            401,
+        )
+    except jwt.InvalidTokenError:
+        return None, (
+            jsonify({"error": "unauthorized", "message": "Token invalide"}),
+            401,
+        )
+
+    if (
+        type(data.get("user_id")) is not int
+        or not isinstance(data.get("email"), str)
+        or data.get("role") not in ALLOWED_ROLES
+    ):
+        return None, (
+            jsonify({"error": "unauthorized", "message": "Claims JWT invalides"}),
+            401,
+        )
+
+    current_user = get_user_by_id(data["user_id"])
+    if not current_user:
+        return None, (
+            jsonify({"error": "unauthorized", "message": "Utilisateur introuvable"}),
+            401,
+        )
+    return current_user, None
 
 
 def token_required(f):
@@ -33,87 +144,30 @@ def token_required(f):
 
     @wraps(f)
     def decorated(*args, **kwargs):
-        token = None
-        auth_header = request.headers.get("Authorization", "")
-        if auth_header.startswith("Bearer "):
-            token = auth_header.split(" ")[1]
-
-        if not token:
-            return jsonify({"error": "unauthorized", "message": "Token manquant"}), 401
-
-        try:
-            data = jwt.decode(
-                token, Config.JWT_SECRET_KEY, algorithms=[Config.JWT_ALGORITHM]
-            )
-            current_user = get_user_by_id(data["user_id"])
-            if not current_user:
-                return (
-                    jsonify(
-                        {"error": "unauthorized", "message": "Utilisateur introuvable"}
-                    ),
-                    401,
-                )
-        except jwt.ExpiredSignatureError:
-            return jsonify({"error": "unauthorized", "message": "Token expiré"}), 401
-        except jwt.InvalidTokenError:
-            return jsonify({"error": "unauthorized", "message": "Token invalide"}), 401
-
+        current_user, error_response = decode_current_user()
+        if error_response:
+            return error_response
         return f(current_user, *args, **kwargs)
 
     return decorated
 
 
 def admin_required(f):
-    """Vérifie le JWT ET le rôle admin, sans imbriquer token_required."""
+    """Vérifie le JWT et le rôle admin."""
 
     @wraps(f)
     def decorated(*args, **kwargs):
-        token = None
-        auth_header = request.headers.get("Authorization", "")
-        if auth_header.startswith("Bearer "):
-            token = auth_header.split(" ")[1]
-
-        if not token:
-            return jsonify({"error": "unauthorized", "message": "Token manquant"}), 401
-
-        try:
-            data = jwt.decode(
-                token, Config.JWT_SECRET_KEY, algorithms=[Config.JWT_ALGORITHM]
-            )
-            current_user = get_user_by_id(data["user_id"])
-            if not current_user:
-                return (
-                    jsonify(
-                        {"error": "unauthorized", "message": "Utilisateur introuvable"}
-                    ),
-                    401,
-                )
-        except jwt.ExpiredSignatureError:
-            return jsonify({"error": "unauthorized", "message": "Token expiré"}), 401
-        except jwt.InvalidTokenError:
-            return jsonify({"error": "unauthorized", "message": "Token invalide"}), 401
-
+        current_user, error_response = decode_current_user()
+        if error_response:
+            return error_response
         if current_user.get("role") != "admin":
             return (
                 jsonify({"error": "forbidden", "message": "Accès réservé aux admins"}),
                 403,
             )
-
         return f(current_user, *args, **kwargs)
 
     return decorated
-
-
-def allowed_avatar(filename):
-    return (
-        "." in filename
-        and filename.rsplit(".", 1)[1].lower() in ALLOWED_AVATAR_EXTENSIONS
-    )
-
-
-def avatar_url(filename):
-    base_url = request.host_url.rstrip("/")
-    return f"{base_url}/api/v1/users/uploads/avatars/{filename}"
 
 
 # ─── ROUTES PUBLIQUES ─────────────────────────────────────────────────────────
@@ -126,28 +180,34 @@ def health():
 
 @users_bp.route("/register", methods=["POST"])
 def register():
-    data = request.get_json() or {}
-    if not data.get("name") or not data.get("email") or not data.get("password"):
-        return (
-            jsonify({"error": "bad_request", "message": "Champs requis manquants"}),
-            400,
-        )
+    data, error_response = get_json_object()
+    if error_response:
+        return error_response
+    unknown_fields_error = reject_unknown_fields(data, REGISTER_FIELDS)
+    if unknown_fields_error:
+        return unknown_fields_error
+    if not REGISTER_FIELDS.issubset(data):
+        return json_error(400, "bad_request", "name, email and password are required")
 
-    if get_user_by_email(data["email"]):
-        return jsonify({"error": "conflict", "message": "Email déjà utilisé"}), 409
-
-    role = "learner"
-    if not EMAIL_RE.match(data["email"]):
-        return jsonify({"error": "bad_request", "message": "Format d'email invalide"}), 400
+    name, name_error = validate_name(data["name"])
+    email, email_error = validate_email(data["email"])
+    password_error = validate_password(data["password"])
+    validation_error = name_error or email_error or password_error
+    if validation_error:
+        return json_error(400, "bad_request", validation_error)
+    if get_user_by_email(email):
+        return json_error(409, "conflict", "Email already used")
 
     hashed = generate_password_hash(data["password"])
-    user = create_user(data["name"], data["email"], hashed, role)
+    user = create_user(name, email, hashed, "learner")
     return jsonify(public_user(user)), 201
 
 
 @users_bp.route("/login", methods=["POST"])
 def login():
-    data = request.get_json() or {}
+    data, error_response = get_json_object()
+    if error_response:
+        return error_response
     email = data.get("email")
     password = data.get("password")
 
@@ -159,23 +219,32 @@ def login():
             400,
         )
 
-    user = get_user_by_email(email)
+    normalized_email, email_error = validate_email(email)
+    if email_error or not isinstance(password, str):
+        return json_error(401, "unauthorized", "Invalid credentials")
+
+    user = get_user_by_email(normalized_email)
     if not user or not check_password_hash(user["password_hash"], password):
         return (
             jsonify({"error": "unauthorized", "message": "Identifiants invalides"}),
             401,
         )
 
+    issued_at = datetime.now(tz=timezone.utc)
     token = jwt.encode(
         {
             "user_id": user["id"],
             "email": user["email"],
             "role": user["role"],
-            "exp": datetime.now(tz=timezone.utc)
-              + timedelta(minutes=Config.JWT_EXPIRES_IN_MINUTES),
+            "iat": issued_at,
+            "exp": issued_at
+            + timedelta(minutes=current_app.config["JWT_EXPIRES_IN_MINUTES"]),
+            "iss": current_app.config["JWT_ISSUER"],
+            "aud": current_app.config["JWT_AUDIENCE"],
+            "jti": uuid4().hex,
         },
-        Config.JWT_SECRET_KEY,
-        algorithm=Config.JWT_ALGORITHM,
+        current_app.config["JWT_SECRET_KEY"],
+        algorithm=current_app.config["JWT_ALGORITHM"],
     )
 
     return (
@@ -198,17 +267,31 @@ def get_profile(current_user):
 @users_bp.route("/me", methods=["PUT"])
 @token_required
 def update_profile(current_user):
-    data = request.get_json() or {}
+    data, error_response = get_json_object()
+    if error_response:
+        return error_response
+    unknown_fields_error = reject_unknown_fields(data, PROFILE_FIELDS)
+    if unknown_fields_error:
+        return unknown_fields_error
     allowed = {}
 
     if "name" in data:
-        allowed["name"] = data["name"]
+        name, validation_error = validate_name(data["name"])
+        if validation_error:
+            return json_error(400, "bad_request", validation_error)
+        allowed["name"] = name
     if "email" in data:
-        existing = get_user_by_email(data["email"])
+        email, validation_error = validate_email(data["email"])
+        if validation_error:
+            return json_error(400, "bad_request", validation_error)
+        existing = get_user_by_email(email)
         if existing and existing["id"] != current_user["id"]:
             return jsonify({"error": "conflict", "message": "Email déjà utilisé"}), 409
-        allowed["email"] = data["email"]
+        allowed["email"] = email
     if "password" in data:
+        validation_error = validate_password(data["password"])
+        if validation_error:
+            return json_error(400, "bad_request", validation_error)
         allowed["password_hash"] = generate_password_hash(data["password"])
 
     if not allowed:
@@ -221,50 +304,6 @@ def update_profile(current_user):
 
     updated = update_user(current_user["id"], **allowed)
     return jsonify(public_user(updated)), 200
-
-
-@users_bp.route("/me/avatar", methods=["POST"])
-@token_required
-def upload_avatar(current_user):
-    if "avatar" not in request.files:
-        return jsonify({"error": "bad_request", "message": "Fichier avatar manquant"}), 400
-
-    file = request.files["avatar"]
-
-    if not file.filename:
-        return jsonify({"error": "bad_request", "message": "Nom de fichier manquant"}), 400
-
-    if not allowed_avatar(file.filename):
-        return (
-            jsonify(
-                {
-                    "error": "bad_request",
-                    "message": "Formats acceptes : jpg, jpeg, png, webp",
-                }
-            ),
-            400,
-        )
-
-    if file.mimetype and not file.mimetype.startswith("image/"):
-        return jsonify({"error": "bad_request", "message": "Le fichier doit etre une image"}), 400
-
-    upload_folder = current_app.config["UPLOAD_FOLDER"]
-    os.makedirs(upload_folder, exist_ok=True)
-
-    original_filename = secure_filename(file.filename)
-    extension = original_filename.rsplit(".", 1)[1].lower()
-    stored_filename = f"user-{current_user['id']}-{uuid4().hex}.{extension}"
-    destination = os.path.join(upload_folder, stored_filename)
-
-    file.save(destination)
-
-    updated = update_user(current_user["id"], avatar_url=avatar_url(stored_filename))
-    return jsonify(public_user(updated)), 200
-
-
-@users_bp.route("/uploads/avatars/<path:filename>", methods=["GET"])
-def get_avatar(filename):
-    return send_from_directory(current_app.config["UPLOAD_FOLDER"], filename)
 
 
 # ─── ROUTES ADMIN ─────────────────────────────────────────────────────────────
@@ -299,10 +338,18 @@ def update_user_admin(current_user, user_id):
             404,
         )
 
-    data = request.get_json() or {}
+    data, error_response = get_json_object()
+    if error_response:
+        return error_response
+    unknown_fields_error = reject_unknown_fields(data, ADMIN_UPDATE_FIELDS)
+    if unknown_fields_error:
+        return unknown_fields_error
     allowed = {}
     if "name" in data:
-        allowed["name"] = data["name"]
+        name, validation_error = validate_name(data["name"])
+        if validation_error:
+            return json_error(400, "bad_request", validation_error)
+        allowed["name"] = name
     if "role" in data:
         if data["role"] not in ALLOWED_ROLES:
             return (
@@ -316,7 +363,13 @@ def update_user_admin(current_user, user_id):
             )
         allowed["role"] = data["role"]
     if "password" in data:
+        validation_error = validate_password(data["password"])
+        if validation_error:
+            return json_error(400, "bad_request", validation_error)
         allowed["password_hash"] = generate_password_hash(data["password"])
+
+    if not allowed:
+        return json_error(400, "bad_request", "No data to update")
 
     updated = update_user(user_id, **allowed)
     return jsonify(public_user(updated)), 200

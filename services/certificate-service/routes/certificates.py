@@ -1,7 +1,10 @@
+import re
 from functools import wraps
 
 import jwt
-from flask import Blueprint, current_app, g, jsonify, request
+from flask import Blueprint, current_app, g, jsonify, request, send_file
+
+from certificate_pdf import generate_certificate_pdf
 
 from db.connection import (
     create_certificate,
@@ -12,6 +15,8 @@ from db.connection import (
 )
 
 certificates_bp = Blueprint("certificates", __name__, url_prefix="/api/v1/certificates")
+ALLOWED_ROLES = {"learner", "admin"}
+JWT_REQUIRED_CLAIMS = ["exp", "iat", "iss", "aud", "user_id", "email", "role"]
 
 
 def json_error(status_code, error, message):
@@ -29,11 +34,21 @@ def decode_token_from_request():
             token,
             current_app.config["JWT_SECRET_KEY"],
             algorithms=[current_app.config["JWT_ALGORITHM"]],
+            issuer=current_app.config["JWT_ISSUER"],
+            audience=current_app.config["JWT_AUDIENCE"],
+            options={"require": JWT_REQUIRED_CLAIMS},
         )
     except jwt.ExpiredSignatureError:
         return None, json_error(401, "unauthorized", "Token expired")
     except jwt.InvalidTokenError:
         return None, json_error(401, "unauthorized", "Invalid token")
+
+    if (
+        type(payload.get("user_id")) is not int
+        or not isinstance(payload.get("email"), str)
+        or payload.get("role") not in ALLOWED_ROLES
+    ):
+        return None, json_error(401, "unauthorized", "Invalid token claims")
 
     return payload, None
 
@@ -106,6 +121,37 @@ def get_certificate(certificate_id):
         return json_error(404, "not_found", "Certificate not found")
 
     return jsonify(certificate), 200
+
+
+@certificates_bp.route("/<int:certificate_id>/download", methods=["GET"])
+@jwt_required
+def download_certificate(certificate_id):
+    role = g.current_user.get("role")
+    if role not in {"admin", "learner"}:
+        return json_error(403, "forbidden", "You are not allowed to download certificates")
+
+    user_id = g.current_user["user_id"] if role == "learner" else None
+    certificate = get_certificate_by_id(certificate_id, user_id=user_id)
+    if certificate is None:
+        return json_error(404, "not_found", "Certificate not found")
+    if certificate["status"] != "active":
+        return json_error(409, "certificate_revoked", "Revoked certificates cannot be downloaded")
+
+    certificate_code = str(certificate["certificate_code"])
+    safe_code = re.sub(r"[^A-Za-z0-9_-]", "-", certificate_code)
+    verification_url = (
+        f"{current_app.config['CERTIFICATE_VERIFY_BASE_URL']}/{certificate_code}"
+    )
+    pdf_buffer = generate_certificate_pdf(certificate, verification_url)
+    response = send_file(
+        pdf_buffer,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"certificat-{safe_code}.pdf",
+    )
+    response.headers["Cache-Control"] = "private, no-store"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 @certificates_bp.route("/verify/<certificate_code>", methods=["GET"])
