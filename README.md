@@ -239,7 +239,7 @@ Certificate Service:
 
 A chaque push sur `main` ou `develop`, GitHub Actions execute:
 
-1. Pytest + Bandit
+1. Pytest + Bandit + pip-audit
 2. Build Docker + scan Docker Scout des vulnerabilites critiques et hautes corrigibles
 3. Push des images vers ghcr.io sur `main`
 

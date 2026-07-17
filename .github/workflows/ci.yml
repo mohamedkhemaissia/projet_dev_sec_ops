@@ -52,6 +52,14 @@ jobs:
       - name: Bandit check
         run: bandit -r services
 
+      - name: pip-audit dependency scan
+        uses: pypa/gh-action-pip-audit@v1.1.0
+        with:
+          inputs: >-
+            services/user-service/requirements.txt
+            services/course-service/requirements.txt
+            services/certificate-service/requirements.txt
+
   build:
     runs-on: ubuntu-latest
     needs: quality
