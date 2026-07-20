@@ -1,0 +1,54 @@
+minimum_pre_commit_version: "4.0.0"
+default_install_hook_types:
+  - pre-commit
+  - pre-push
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args:
+          - --maxkb=1000
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-yaml
+        args:
+          - --allow-multiple-documents
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.3.0
+    hooks:
+      - id: flake8
+        args:
+          - --max-line-length=120
+          - --extend-ignore=E501,W503
+        files: ^(services|tests)/.*\.py$
+
+  - repo: local
+    hooks:
+      - id: gitleaks
+        name: Gitleaks secret scan
+        entry: gitleaks git --pre-commit --redact --staged --verbose
+        language: system
+        pass_filenames: false
+        stages:
+          - pre-commit
+
+      - id: bandit
+        name: Bandit security scan
+        entry: .venv/Scripts/python.exe -m bandit -r services
+        language: system
+        pass_filenames: false
+        stages:
+          - pre-commit
+
+      - id: pytest
+        name: Pytest with coverage threshold
+        entry: .venv/Scripts/python.exe -m pytest tests -q --cov=services --cov-report=term-missing --cov-fail-under=55
+        language: system
+        pass_filenames: false
+        stages:
+          - pre-push

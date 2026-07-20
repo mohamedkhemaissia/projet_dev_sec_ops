@@ -6,6 +6,7 @@ instance/
 *.db
 /.vscode/
 /.pytest_cache/
+/.pre-commit-cache/
 /.coverage
 /coverage.xml
 *.log

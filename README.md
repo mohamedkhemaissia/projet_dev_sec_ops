@@ -82,6 +82,33 @@ Ou:
 .\scripts\run-tests.ps1
 ```
 
+## Controles Shift Left locaux
+
+Installer les dependances de test et les hooks Git une seule fois :
+
+```powershell
+winget install --id Gitleaks.Gitleaks --exact
+pip install -r requirements-test.txt
+pre-commit install
+```
+
+Ouvrir un nouveau terminal apres l'installation de Gitleaks afin que la commande
+soit disponible dans le `PATH`.
+
+Les controles de format, YAML, Flake8, Bandit et Gitleaks sont executes avant
+chaque commit. La suite Pytest avec son seuil de couverture est executee avant
+chaque push.
+
+Pour verifier tout le depot manuellement :
+
+```powershell
+pre-commit run --all-files
+pre-commit run --all-files --hook-stage pre-push
+```
+
+La politique de securite se trouve dans `SECURITY.md` et le threat model STRIDE
+dans `docs/security/threat-model.md`.
+
 ## Scenario Postman
 
 ### 1. Health checks

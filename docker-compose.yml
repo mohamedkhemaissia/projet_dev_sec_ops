@@ -77,7 +77,7 @@ services:
     environment:
       FLASK_DEBUG: "false"
       APP_HOST: "0.0.0.0"
-      SECRET_KEY: ${SECRET_KEY} 
+      SECRET_KEY: ${SECRET_KEY}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       MYSQL_HOST: mysql
       MYSQL_PORT: "3306"

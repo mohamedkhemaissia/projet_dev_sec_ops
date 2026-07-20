@@ -11,6 +11,10 @@ resources:
   - user-service.yaml
   - course-service.yaml
   - certificate-service.yaml
+  - user-service-hpa.yaml
+  - course-service-hpa.yaml
+  - certificate-service-hpa.yaml
+  - ingress.yaml
 
 configMapGenerator:
   - name: mysql-initdb
