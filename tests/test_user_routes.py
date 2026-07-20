@@ -86,6 +86,7 @@ def test_register_success(mock_get_email, mock_create_user, client):
     assert body["role"] == "learner"
     mock_create_user.assert_called_once()
 
+
 @patch("routes.users.create_user")
 @patch("routes.users.get_user_by_email", return_value=None)
 def test_register_rejects_privileged_role(mock_get_email, mock_create_user, client):

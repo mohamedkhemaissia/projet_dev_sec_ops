@@ -43,19 +43,16 @@ jobs:
           pip install -r services/certificate-service/requirements.txt
           pip install -r requirements-test.txt
 
-      # Flake8 is kept documented but disabled temporarily during MVP stabilization.
-      # Re-enable before final delivery when formatting debt is under control.
-      # - name: Flake8 check
-      #   run: flake8 services tests --max-line-length=120 --extend-ignore=E501,W503
+      - name: Flake8 check
+        run: flake8 services tests --max-line-length=120 --extend-ignore=E501,W503
 
-      - name: Pytest user-service
-        run: python -m pytest tests/test_user_routes.py -v
-
-      - name: Pytest course-service
-        run: python -m pytest tests/test_course_routes.py -v
-
-      - name: Pytest certificate-service
-        run: python -m pytest tests/test_certificate_routes.py -v
+      - name: Pytest with coverage threshold
+        run: >-
+          python -m pytest tests -v
+          --cov=services
+          --cov-report=term-missing
+          --cov-report=xml
+          --cov-fail-under=55
 
       - name: Bandit check
         run: bandit -r services

@@ -1,6 +1,7 @@
 from datetime import date, datetime
 from io import BytesIO
 
+
 def _format_issued_at(value):
     if isinstance(value, (date, datetime)):
         return value.strftime("%d/%m/%Y")
