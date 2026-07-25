@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import course_card, empty_state %}
+{% block title %}Formations — TrainingHub{% endblock %}
+{% block page_name %}Catalogue des formations{% endblock %}
+{% block content %}
+<div class="page-heading">
+    <div><span class="eyebrow">Développez vos compétences</span><h1>Catalogue des formations</h1><p>Explorez les parcours disponibles et choisissez votre prochain objectif.</p></div>
+    {% if current_user.role == "admin" %}
+        <a class="btn btn-primary" href="{{ url_for('web.admin_create_course') }}"><i class="bi bi-plus-lg"></i> Nouvelle formation</a>
+    {% endif %}
+</div>
+
+<form class="filter-bar" method="get">
+    <div class="search-field"><i class="bi bi-search"></i><input name="q" value="{{ request.args.get('q', '') }}" placeholder="Rechercher une formation..."></div>
+    <select class="form-select" name="level" aria-label="Filtrer par niveau">
+        <option value="">Tous les niveaux</option>
+        {% for value, label in [('beginner', 'Débutant'), ('intermediate', 'Intermédiaire'), ('advanced', 'Avancé')] %}
+            <option value="{{ value }}" {{ 'selected' if request.args.get('level') == value }}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <select class="form-select" name="category" aria-label="Filtrer par catégorie">
+        <option value="">Toutes les catégories</option>
+        {% for item in categories %}<option value="{{ item }}" {{ 'selected' if request.args.get('category') == item }}>{{ item }}</option>{% endfor %}
+    </select>
+    <button class="btn btn-dark" type="submit">Filtrer</button>
+    {% if request.args %}
+        <a class="btn btn-soft" href="{{ url_for('web.courses') }}" aria-label="Réinitialiser"><i class="bi bi-x-lg"></i></a>
+    {% endif %}
+</form>
+
+<div class="result-meta"><strong>{{ courses|length }}</strong> formation{{ 's' if courses|length != 1 }} disponible{{ 's' if courses|length != 1 }}</div>
+{% if courses %}
+    <div class="course-grid">
+        {% for course in courses %}{{ course_card(course, enrollment_map.get(course.id)) }}{% endfor %}
+    </div>
+{% else %}
+    {{ empty_state('bi-search', 'Aucun résultat', 'Modifiez vos critères ou réinitialisez les filtres.', url_for('web.courses'), 'Réinitialiser') }}
+{% endif %}
+{% endblock %}

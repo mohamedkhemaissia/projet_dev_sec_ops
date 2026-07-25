@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Administration — TrainingHub{% endblock %}
+{% block page_name %}Pilotage de la plateforme{% endblock %}
+{% block content %}
+<div class="page-heading">
+    <div><span class="eyebrow">Centre de pilotage</span><h1>Bonjour {{ current_user.name.split()[0] }}</h1><p>Une vue synthétique de l’activité TrainingHub.</p></div>
+    <a class="btn btn-primary" href="{{ url_for('web.admin_create_course') }}"><i class="bi bi-plus-lg"></i> Créer une formation</a>
+</div>
+
+<section class="stats-grid">
+    <article class="stat-card stat-violet"><span class="stat-icon"><i class="bi bi-people-fill"></i></span><div><strong>{{ stats.learners }}</strong><span>Apprenants</span></div><i class="bi bi-person-plus stat-arrow"></i></article>
+    <article class="stat-card stat-cyan"><span class="stat-icon"><i class="bi bi-collection-play-fill"></i></span><div><strong>{{ stats.courses }}</strong><span>Formations</span></div><i class="bi bi-layers stat-arrow"></i></article>
+    <article class="stat-card stat-orange"><span class="stat-icon"><i class="bi bi-journal-check"></i></span><div><strong>{{ stats.enrollments }}</strong><span>Inscriptions</span></div><i class="bi bi-activity stat-arrow"></i></article>
+    <article class="stat-card stat-green"><span class="stat-icon"><i class="bi bi-trophy-fill"></i></span><div><strong>{{ stats.completed }}</strong><span>Parcours terminés</span></div><i class="bi bi-graph-up-arrow stat-arrow"></i></article>
+</section>
+
+<div class="admin-dashboard-grid">
+    <section class="panel activity-chart-panel">
+        <div class="panel-heading"><div><span class="eyebrow">Vue d’ensemble</span><h2>Répartition de l’activité</h2></div><span class="live-pill"><i></i> Données actuelles</span></div>
+        <div class="chart-wrap"><canvas id="activityChart" data-learners="{{ stats.learners }}" data-courses="{{ stats.courses }}" data-enrollments="{{ stats.enrollments }}" data-completed="{{ stats.completed }}"></canvas></div>
+    </section>
+    <section class="panel quick-actions">
+        <div class="panel-heading"><div><span class="eyebrow">Accès rapide</span><h2>Actions fréquentes</h2></div></div>
+        <a href="{{ url_for('web.admin_create_course') }}"><span class="quick-icon violet"><i class="bi bi-plus-lg"></i></span><div><strong>Nouvelle formation</strong><small>Publier un parcours</small></div><i class="bi bi-chevron-right"></i></a>
+        <a href="{{ url_for('web.admin_users') }}"><span class="quick-icon cyan"><i class="bi bi-people"></i></span><div><strong>Utilisateurs</strong><small>Rôles et comptes</small></div><i class="bi bi-chevron-right"></i></a>
+        <a href="{{ url_for('web.admin_courses') }}"><span class="quick-icon orange"><i class="bi bi-kanban"></i></span><div><strong>Inscriptions</strong><small>Suivre la progression</small></div><i class="bi bi-chevron-right"></i></a>
+    </section>
+</div>
+
+<div class="content-grid mt-4">
+    <section class="panel">
+        <div class="panel-heading"><div><span class="eyebrow">Derniers inscrits</span><h2>Nouveaux utilisateurs</h2></div><a href="{{ url_for('web.admin_users') }}">Tout afficher <i class="bi bi-arrow-right"></i></a></div>
+        <div class="compact-list">
+            {% for user in recent_users %}
+            <div class="compact-item">
+                <span class="avatar">{{ user.name[:1]|upper }}</span>
+                <div><strong>{{ user.name }}</strong><small>{{ user.email }}</small></div>
+                <span class="role-badge">{{ "Admin" if user.role == "admin" else "Learner" }}</span>
+            </div>
+            {% else %}<p class="text-muted mb-0">Aucun utilisateur disponible.</p>{% endfor %}
+        </div>
+    </section>
+    <section class="panel">
+        <div class="panel-heading"><div><span class="eyebrow">Catalogue</span><h2>Formations récentes</h2></div><a href="{{ url_for('web.admin_courses') }}">Gérer <i class="bi bi-arrow-right"></i></a></div>
+        <div class="compact-list">
+            {% for course in recent_courses %}
+            <a class="compact-item" href="{{ url_for('web.course_detail', course_id=course.id) }}">
+                <span class="quick-icon {{ ['violet', 'cyan', 'orange'][loop.index0 % 3] }}"><i class="bi bi-journal-code"></i></span>
+                <div><strong>{{ course.title }}</strong><small>{{ course.category }} · {{ course.duration|int }} h</small></div>
+                <i class="bi bi-arrow-up-right ms-auto"></i>
+            </a>
+            {% else %}<p class="text-muted mb-0">Aucune formation disponible.</p>{% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

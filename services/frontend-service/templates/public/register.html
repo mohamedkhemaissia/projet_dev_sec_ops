@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Créer un compte — TrainingHub{% endblock %}
+{% block public_content %}
+<section class="auth-section">
+    <div class="auth-visual auth-visual-register">
+        <div class="auth-pattern"></div>
+        <div class="auth-visual-content">
+            <span class="brand-mark brand-mark-lg"><i class="bi bi-layers-half"></i></span>
+            <span class="eyebrow">Commencez aujourd’hui</span>
+            <h1>Votre prochain niveau est à portée de clic.</h1>
+            <p>Créez un espace personnel pour organiser votre apprentissage et valoriser vos réussites.</p>
+            <ul class="auth-benefits">
+                <li><i class="bi bi-check2"></i> Catalogue de formations centralisé</li>
+                <li><i class="bi bi-check2"></i> Progression visible en temps réel</li>
+                <li><i class="bi bi-check2"></i> Certificats uniques et vérifiables</li>
+            </ul>
+        </div>
+    </div>
+    <div class="auth-form-side">
+        <div class="auth-form-wrap">
+            <a class="back-link" href="{{ url_for('web.home') }}"><i class="bi bi-arrow-left"></i> Retour à l’accueil</a>
+            <div class="auth-heading">
+                <span class="eyebrow">Inscription apprenant</span>
+                <h2>Créez votre espace</h2>
+                <p>Quelques informations suffisent pour commencer.</p>
+            </div>
+            <form method="post" class="modern-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label for="name">Nom complet</label>
+                    <div class="input-wrap"><i class="bi bi-person"></i><input class="form-control" id="name" name="name" minlength="2" maxlength="100" autocomplete="name" placeholder="Votre nom complet" required></div>
+                </div>
+                <div class="form-group">
+                    <label for="email">Adresse e-mail</label>
+                    <div class="input-wrap"><i class="bi bi-envelope"></i><input class="form-control" type="email" id="email" name="email" autocomplete="email" placeholder="vous@exemple.com" required></div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6 form-group">
+                        <label for="password">Mot de passe</label>
+                        <div class="input-wrap"><i class="bi bi-key"></i><input class="form-control password-input" type="password" id="password" name="password" minlength="12" autocomplete="new-password" required></div>
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label for="password_confirm">Confirmation</label>
+                        <div class="input-wrap"><i class="bi bi-shield-check"></i><input class="form-control password-input" type="password" id="password_confirm" name="password_confirm" minlength="12" autocomplete="new-password" required></div>
+                    </div>
+                </div>
+                <p class="password-hint"><i class="bi bi-info-circle"></i> 12 caractères minimum avec majuscule, minuscule, chiffre et symbole.</p>
+                <button class="btn btn-primary btn-lg w-100" type="submit">Créer mon compte <i class="bi bi-arrow-right"></i></button>
+            </form>
+            <p class="auth-switch">Déjà inscrit ? <a href="{{ url_for('web.login') }}">Se connecter</a></p>
+        </div>
+    </div>
+</section>
+{% endblock %}

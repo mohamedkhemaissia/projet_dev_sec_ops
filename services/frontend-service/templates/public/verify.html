@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Vérifier un certificat — TrainingHub{% endblock %}
+{% block public_content %}
+<section class="verify-hero">
+    <div class="container">
+        <div class="verify-intro">
+            <span class="verify-icon"><i class="bi bi-patch-check-fill"></i></span>
+            <span class="eyebrow">Vérification publique</span>
+            <h1>Authentifiez un certificat TrainingHub</h1>
+            <p>Saisissez le code unique présent sur le document pour vérifier instantanément son authenticité.</p>
+        </div>
+        <form class="verify-form" method="get">
+            <div class="input-wrap">
+                <i class="bi bi-upc-scan"></i>
+                <input class="form-control" name="code" value="{{ code }}" placeholder="Exemple : TH-A1B2C3D4E5F6" autocomplete="off" required>
+            </div>
+            <button class="btn btn-primary btn-lg" type="submit">Vérifier <i class="bi bi-search"></i></button>
+        </form>
+
+        {% if result %}
+            {% set certificate = result.certificate %}
+            <div class="verification-result valid">
+                <div class="result-seal"><i class="bi bi-check2"></i></div>
+                <div class="result-heading">
+                    <span>Certificat authentique</span>
+                    <h2>{{ certificate.course_title }}</h2>
+                    <p>Délivré à <strong>{{ certificate.learner_name }}</strong></p>
+                </div>
+                <div class="result-grid">
+                    <div><span>Code du certificat</span><strong>{{ certificate.certificate_code }}</strong></div>
+                    <div><span>Catégorie</span><strong>{{ certificate.category }}</strong></div>
+                    <div><span>Niveau</span><strong>{{ certificate.level|status_label }}</strong></div>
+                    <div><span>Statut</span><strong>{{ certificate.status|status_label }}</strong></div>
+                </div>
+            </div>
+        {% elif searched %}
+            <div class="verification-result invalid">
+                <div class="result-seal"><i class="bi bi-x-lg"></i></div>
+                <div><h2>Certificat introuvable</h2><p>Vérifiez le code saisi ou contactez le titulaire du document.</p></div>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import status_badge, empty_state %}
+{% block title %}Inscriptions — {{ course.title }}{% endblock %}
+{% block page_name %}Suivi des inscriptions{% endblock %}
+{% block content %}
+<a class="back-link mb-4 d-inline-flex" href="{{ url_for('web.admin_courses') }}"><i class="bi bi-arrow-left"></i> Retour aux formations</a>
+<div class="page-heading">
+    <div><span class="eyebrow">{{ course.category }}</span><h1>{{ course.title }}</h1><p>Actualisez la progression des apprenants inscrits.</p></div>
+    <span class="count-pill"><strong>{{ enrollments|length }}</strong> inscription{{ 's' if enrollments|length != 1 }}</span>
+</div>
+{% if enrollments %}
+<div class="data-card">
+    <div class="table-responsive">
+        <table class="table modern-table align-middle">
+            <thead><tr><th>Apprenant</th><th>Inscription</th><th>État actuel</th><th class="text-end">Mettre à jour</th></tr></thead>
+            <tbody>
+            {% for item in enrollments %}
+            <tr>
+                <td><div class="user-cell"><span class="avatar">{{ item.learner_name[:1]|upper }}</span><div><strong>{{ item.learner_name }}</strong><small>{{ item.learner_email }}</small></div></div></td>
+                <td><span class="id-code">#{{ "%04d"|format(item.id) }}</span></td>
+                <td>{{ status_badge(item.status) }}</td>
+                <td>
+                    <form class="status-form" method="post" action="{{ url_for('web.admin_update_enrollment', enrollment_id=item.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="course_id" value="{{ course.id }}">
+                        <select class="form-select form-select-sm" name="status">
+                            <option value="enrolled" {{ 'selected' if item.status == 'enrolled' }}>Inscrit</option>
+                            <option value="in_progress" {{ 'selected' if item.status == 'in_progress' }}>En cours</option>
+                            <option value="completed" {{ 'selected' if item.status == 'completed' }}>Terminée</option>
+                        </select>
+                        <button class="btn btn-dark btn-sm" type="submit">Actualiser</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}{{ empty_state('bi-people', 'Aucun apprenant inscrit', 'Les nouvelles inscriptions apparaîtront ici.') }}{% endif %}
+{% endblock %}
