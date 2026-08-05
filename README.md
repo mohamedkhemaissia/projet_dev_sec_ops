@@ -305,7 +305,7 @@ La configuration du CD, des secrets GitHub et du rollback est documentee dans
 
 Le projet ferme la boucle apres le deploiement avec :
 
-- metriques Prometheus sur les quatre services ;
+- metriques Prometheus sur les services applicatifs et AIOps ;
 - dashboard Grafana provisionne automatiquement dans Docker Compose et Kubernetes ;
 - alertes de disponibilite, taux d'erreur et latence ;
 - logs JSON correles par `X-Request-ID` ;
@@ -316,6 +316,22 @@ Voir `docs/observability-shift-right.md` pour le lancement, les requetes PromQL,
 la demonstration d'une alerte et la configuration du DAST.
 Le deploiement Kubernetes du monitoring est documente dans
 `k8s/monitoring/README.md`.
+
+### Assistant AIOps
+
+TrainingHub inclut un assistant d'analyse d'incidents en lecture seule. Il recoit
+les alertes d'Alertmanager, enrichit le contexte depuis Prometheus et genere un
+diagnostic structure. Le mode `rules` est reproductible sans modele ; le mode
+`ollama` active une analyse LLM locale avec repli automatique.
+
+Apres le demarrage Docker Compose, lancer un scenario controle avec :
+
+```powershell
+.\scripts\run-aiops-scenario.ps1
+```
+
+Le contrat, les limites de securite et le protocole d'evaluation sont detailles
+dans [`docs/aiops-architecture.md`](docs/aiops-architecture.md).
 
 ## Documentation PFE
 
@@ -328,3 +344,4 @@ Le deploiement Kubernetes du monitoring est documente dans
 - Modele de menaces STRIDE : `docs/security/threat-model.md`
 - Shift Right et observabilite : `docs/observability-shift-right.md`
 - Matrice de couverture DevSecOps : `docs/devsecops-coverage.md`
+- Assistant AIOps : `docs/aiops-architecture.md`

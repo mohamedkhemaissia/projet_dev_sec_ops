@@ -147,6 +147,42 @@ services:
       SESSION_FILE_DIR: /tmp/traininghub-frontend-sessions
       SESSION_COOKIE_SECURE: "false"
 
+  # --- ASSISTANT AIOPS EN LECTURE SEULE ---
+  ai-ops-service:
+    build:
+      context: .
+      dockerfile: infra/docker/ai-ops-service.Dockerfile
+    image: ai-ops-service:latest
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    ports:
+      - "5005:5005"
+    environment:
+      APP_HOST: "0.0.0.0"
+      APP_PORT: "5005"
+      AIOPS_WEBHOOK_TOKEN: ${AIOPS_WEBHOOK_TOKEN:-traininghub-aiops-local-token}
+      AIOPS_MODEL_PROVIDER: ${AIOPS_MODEL_PROVIDER:-rules}
+      PROMETHEUS_URL: http://prometheus:9090
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma3:1b}
+
+  # --- MODELE LOCAL OPTIONNEL : docker compose --profile ai up -d ollama ---
+  ollama:
+    profiles:
+      - ai
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    security_opt:
+      - no-new-privileges:true
+
   # --- SHIFT RIGHT: METRIQUES, DASHBOARDS ET ALERTES ---
   prometheus:
     image: prom/prometheus:v3.5.0
@@ -159,6 +195,8 @@ services:
       certificate-service:
         condition: service_started
       frontend-service:
+        condition: service_started
+      ai-ops-service:
         condition: service_started
       alertmanager:
         condition: service_started
@@ -215,3 +253,4 @@ volumes:
   prometheus_data:
   alertmanager_data:
   grafana_data:
+  ollama_data:

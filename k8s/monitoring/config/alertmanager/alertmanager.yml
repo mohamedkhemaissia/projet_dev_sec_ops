@@ -2,7 +2,7 @@ global:
   resolve_timeout: 5m
 
 route:
-  receiver: local-dashboard
+  receiver: aiops-webhook
   group_by:
     - alertname
     - service
@@ -11,4 +11,11 @@ route:
   repeat_interval: 4h
 
 receivers:
-  - name: local-dashboard
+  - name: aiops-webhook
+    webhook_configs:
+      - url: http://ai-ops-service.traininghub.svc.cluster.local:5005/api/v1/alerts
+        send_resolved: true
+        http_config:
+          authorization:
+            type: Bearer
+            credentials_file: /etc/alertmanager-secrets/aiops-token

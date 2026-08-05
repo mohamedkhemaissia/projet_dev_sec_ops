@@ -8,6 +8,7 @@ namespace: traininghub
 resources:
   - ../../namespace.yaml
   - ../../frontend.yaml
+  - ../../ai-ops-service.yaml
   - ../../app-config.yaml
   - ../../mysql.yaml
   - ../../user-service.yaml

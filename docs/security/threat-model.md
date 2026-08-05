@@ -5,6 +5,7 @@
 Le modele couvre les trois API Flask (`user-service`, `course-service` et
 `certificate-service`), le frontend, la base MySQL partagee, les JWT, les images
 Docker, Kubernetes, la pipeline GitHub Actions et la chaine d'observabilite.
+Le perimetre inclut aussi `ai-ops-service` et son modele Ollama local optionnel.
 Les clients de demonstration sont le portail web et Postman.
 
 ## Actifs a proteger
@@ -16,6 +17,7 @@ Les clients de demonstration sont le portail web et Postman.
 - certificats, codes de verification et fichiers PDF ;
 - identifiants MySQL et secrets de la pipeline ;
 - integrite des images publiees dans GHCR.
+- jeton du webhook AIOps, donnees d'incident et sorties du modele.
 
 ## Frontieres de confiance
 
@@ -27,6 +29,8 @@ Les clients de demonstration sont le portail web et Postman.
 6. Prometheus vers les endpoints `/metrics` des services ;
 7. Grafana et Alertmanager vers Prometheus ;
 8. OWASP ZAP vers l'environnement de staging deploye.
+9. Alertmanager vers le webhook AIOps authentifie ;
+10. AIOps vers Prometheus et vers l'API locale Ollama.
 
 ## Analyse STRIDE
 
@@ -55,6 +59,17 @@ Les clients de demonstration sont le portail web et Postman.
 | Regression dynamique | OWASP ZAP Baseline apres deploiement |
 | Incident non detecte | Metriques, alertes, request ID et logs structures |
 
+## Menaces propres a l'assistant AIOps
+
+| Risque IA | Scenario | Mesures implementees | Risque residuel |
+|---|---|---|---|
+| Prompt injection | Une annotation d'alerte contient une instruction destinee au modele | Entrees declarees non fiables, nettoyage, delimitation du contexte et sortie JSON validee | Un modele peut encore produire une analyse trompeuse |
+| Divulgation de secrets | Un token ou mot de passe apparait dans une alerte | Cles sensibles et valeurs de type Bearer masquees avant analyse | Des donnees sensibles non reconnues par les motifs peuvent subsister |
+| Sortie non fiable | Le modele invente une cause ou une commande dangereuse | Schema borne, confiance explicite, recommandations uniquement et validation humaine | La pertinence semantique doit etre evaluee par scenario |
+| Excessive agency | Le modele tente de modifier un pod ou de lancer un rollback | Aucun acces Kubernetes, Docker ou MySQL et aucune fonction de remediation | Une recommandation incorrecte peut influencer un operateur |
+| Indisponibilite du modele | Ollama expire ou renvoie un JSON invalide | Timeout et repli sur des regles deterministes | Le mode de repli est moins contextuel |
+| Consommation non bornee | Une alerte enorme ou des appels nombreux saturent le modele | Corps HTTP, nombre d'alertes, longueur des textes et sortie limites | Ajouter un rate limiting distribue avant exposition externe |
+
 ## Hypotheses et risques acceptes pour le MVP
 
 - HTTP est accepte uniquement sur la machine locale de demonstration.
@@ -64,6 +79,10 @@ Les clients de demonstration sont le portail web et Postman.
 - La disponibilite multi-region et la revocation JWT ne sont pas traitees comme
   des fonctions completes de production.
 - Alertmanager utilise un receiver local ; un canal externe necessite des secrets.
+- L'historique AIOps est borne mais conserve en memoire ; un seul replica est utilise
+  tant qu'une persistance partagee n'est pas implementee.
+- Le modele local assiste le diagnostic mais ne constitue jamais une autorite de
+  decision ou une preuve de cause racine.
 
 ## Revue du modele
 

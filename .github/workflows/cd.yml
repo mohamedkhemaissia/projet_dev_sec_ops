@@ -41,6 +41,7 @@ jobs:
       MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
       MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
       DEFAULT_ADMIN_PASSWORD: ${{ secrets.DEFAULT_ADMIN_PASSWORD }}
+      AIOPS_WEBHOOK_TOKEN: ${{ secrets.AIOPS_WEBHOOK_TOKEN }}
       IMAGE_TAG: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.run_number || inputs.image_tag }}
 
     steps:
@@ -67,6 +68,7 @@ jobs:
             MYSQL_ROOT_PASSWORD
             MYSQL_PASSWORD
             DEFAULT_ADMIN_PASSWORD
+            AIOPS_WEBHOOK_TOKEN
           )
 
           for secret_name in "${required_secrets[@]}"; do
@@ -137,6 +139,18 @@ jobs:
           apiVersion: apps/v1
           kind: Deployment
           metadata:
+            name: ai-ops-service
+            namespace: traininghub
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: ai-ops-service
+                    image: ${image_prefix}/ai-ops-service:${IMAGE_TAG}
+          ---
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
             name: frontend-service
             namespace: traininghub
           spec:
@@ -167,6 +181,7 @@ jobs:
             --from-literal=MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD}" \
             --from-literal=MYSQL_PASSWORD="${MYSQL_PASSWORD}" \
             --from-literal=DEFAULT_ADMIN_PASSWORD="${DEFAULT_ADMIN_PASSWORD}" \
+            --from-literal=AIOPS_WEBHOOK_TOKEN="${AIOPS_WEBHOOK_TOKEN}" \
             --dry-run=client -o yaml | kubectl apply -f -
 
           kubectl -n traininghub create secret docker-registry ghcr-pull-secret \
@@ -183,7 +198,7 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          deployments=(user-service course-service certificate-service frontend-service)
+          deployments=(user-service course-service certificate-service frontend-service ai-ops-service)
 
           rollback() {
             echo "Deployment failed; rolling application deployments back." >&2
@@ -215,6 +230,7 @@ jobs:
           kubectl get --raw "/api/v1/namespaces/traininghub/services/http:course-service:5002/proxy/api/v1/courses/health" > /dev/null
           kubectl get --raw "/api/v1/namespaces/traininghub/services/http:certificate-service:5004/proxy/api/v1/certificates/health" > /dev/null
           kubectl get --raw "/api/v1/namespaces/traininghub/services/http:frontend-service:3000/proxy/health" > /dev/null
+          kubectl get --raw "/api/v1/namespaces/traininghub/services/http:ai-ops-service:5005/proxy/api/v1/health" > /dev/null
           kubectl -n traininghub get deployments,pods,services
 
       - name: Roll back after failed smoke tests
@@ -222,10 +238,10 @@ jobs:
         shell: bash
         run: |
           set -u
-          for deployment in user-service course-service certificate-service frontend-service; do
+          for deployment in user-service course-service certificate-service frontend-service ai-ops-service; do
             kubectl -n traininghub rollout undo "deployment/${deployment}" || true
           done
-          for deployment in user-service course-service certificate-service frontend-service; do
+          for deployment in user-service course-service certificate-service frontend-service ai-ops-service; do
             kubectl -n traininghub rollout status "deployment/${deployment}" --timeout=180s || true
           done
 

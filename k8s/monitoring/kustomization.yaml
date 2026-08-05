@@ -5,6 +5,7 @@ namespace: monitoring
 
 resources:
   - namespace.yaml
+  - aiops-secret.yaml
   - rbac.yaml
   - prometheus.yaml
   - alertmanager.yaml

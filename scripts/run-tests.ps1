@@ -26,6 +26,7 @@ try {
             "services/course-service/requirements.txt",
             "services/certificate-service/requirements.txt",
             "services/frontend-service/requirements.txt",
+            "services/ai-ops-service/requirements.txt",
             "requirements-test.txt"
         )
 

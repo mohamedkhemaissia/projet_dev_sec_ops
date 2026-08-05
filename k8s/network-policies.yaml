@@ -23,6 +23,7 @@ spec:
           - user-service
           - course-service
           - certificate-service
+          - ai-ops-service
   policyTypes:
     - Ingress
   ingress:
@@ -39,6 +40,8 @@ spec:
           port: 5002
         - protocol: TCP
           port: 5004
+        - protocol: TCP
+          port: 5005
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -54,6 +57,7 @@ spec:
           - user-service
           - course-service
           - certificate-service
+          - ai-ops-service
   policyTypes:
     - Ingress
   ingress:
@@ -68,6 +72,8 @@ spec:
           port: 5002
         - protocol: TCP
           port: 5004
+        - protocol: TCP
+          port: 5005
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

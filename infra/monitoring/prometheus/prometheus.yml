@@ -36,3 +36,7 @@ scrape_configs:
           - frontend-service:3000
         labels:
           service: frontend-service
+      - targets:
+          - ai-ops-service:5005
+        labels:
+          service: ai-ops-service

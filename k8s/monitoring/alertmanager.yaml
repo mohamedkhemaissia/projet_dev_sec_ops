@@ -62,12 +62,18 @@ spec:
             - name: config
               mountPath: /etc/alertmanager
               readOnly: true
+            - name: aiops-webhook-secret
+              mountPath: /etc/alertmanager-secrets
+              readOnly: true
             - name: data
               mountPath: /alertmanager
       volumes:
         - name: config
           configMap:
             name: alertmanager-config
+        - name: aiops-webhook-secret
+          secret:
+            secretName: aiops-webhook-secret
         - name: data
           emptyDir: {}
 ---

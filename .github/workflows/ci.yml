@@ -42,6 +42,7 @@ jobs:
           pip install -r services/course-service/requirements.txt
           pip install -r services/certificate-service/requirements.txt
           pip install -r services/frontend-service/requirements.txt
+          pip install -r services/ai-ops-service/requirements.txt
           pip install -r requirements-test.txt
 
       - name: Flake8 check
@@ -151,6 +152,9 @@ jobs:
       - name: Build frontend-service
         run: docker build -f infra/docker/frontend-service.Dockerfile -t frontend-service:latest .
 
+      - name: Build ai-ops-service
+        run: docker build -f infra/docker/ai-ops-service.Dockerfile -t ai-ops-service:latest .
+
       - name: Login to Docker Hub for Docker Scout
         uses: docker/login-action@v4
         with:
@@ -192,6 +196,16 @@ jobs:
         with:
           command: cves
           image: local://frontend-service:latest
+          only-severities: critical,high
+          only-fixed: true
+          exit-code: true
+          summary: true
+
+      - name: Docker Scout scan on ai-ops-service
+        uses: docker/scout-action@v1
+        with:
+          command: cves
+          image: local://ai-ops-service:latest
           only-severities: critical,high
           only-fixed: true
           exit-code: true
@@ -247,3 +261,11 @@ jobs:
             -t ${{ env.IMAGE_PREFIX }}/frontend-service:latest .
           docker push ${{ env.IMAGE_PREFIX }}/frontend-service:${{ github.run_number }}
           docker push ${{ env.IMAGE_PREFIX }}/frontend-service:latest
+
+      - name: Build and push ai-ops-service
+        run: |
+          docker build -f infra/docker/ai-ops-service.Dockerfile \
+            -t ${{ env.IMAGE_PREFIX }}/ai-ops-service:${{ github.run_number }} \
+            -t ${{ env.IMAGE_PREFIX }}/ai-ops-service:latest .
+          docker push ${{ env.IMAGE_PREFIX }}/ai-ops-service:${{ github.run_number }}
+          docker push ${{ env.IMAGE_PREFIX }}/ai-ops-service:latest

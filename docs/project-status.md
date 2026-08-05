@@ -1,4 +1,4 @@
-# Etat final du projet TrainingHub
+# Etat du projet TrainingHub
 
 ## Livrables termines
 
@@ -20,6 +20,25 @@
 | Demonstration | Termine | Portail web et collection Postman testée de bout en bout |
 | Documentation securite | Termine | Politique de securite et threat model STRIDE |
 | Diagrammes | Termine | Architecture, parcours metier et pipeline CI/CD |
+| Assistant AIOps | Implemente, evaluation LLM restante | Webhook Alertmanager, enrichissement Prometheus, regles de secours, client Ollama et evaluation CSV |
+
+## Extension AIOps du 5 aout 2026
+
+- nouveau `ai-ops-service` Flask/Gunicorn en lecture seule ;
+- webhook Alertmanager authentifie et teste de bout en bout dans Docker ;
+- trois requetes Prometheus placees sur liste blanche ;
+- nettoyage des secrets, validation des sorties et absence de permissions de
+  remediation ;
+- mode Ollama local optionnel et repli deterministe ;
+- 63 tests Pytest au total et couverture CI de 65,19 % pour un seuil de 55 % ;
+- Flake8, Bandit, Docker Compose et les trois rendus Kustomize valides ;
+- image AIOps non-root validee avec Gunicorn et filesystem en lecture seule ;
+- baseline de trois incidents enregistree dans
+  `docs/evidence/aiops-rules-baseline.csv`.
+
+Le telechargement initial de l'image Ollama n'a pas termine dans la fenetre locale.
+Les resultats `rules` ne doivent donc pas etre presentes comme des resultats LLM.
+L'evaluation `ollama` reste a executer puis a faire noter manuellement.
 
 ## Validations locales du 27 juillet 2026
 
@@ -48,16 +67,18 @@
 
 Ces actions ne demandent plus de developpement :
 
-1. creer l'environnement GitHub `production` et ses secrets si un cluster distant
+1. terminer le telechargement Ollama et produire `aiops-ollama-evaluation.csv` ;
+2. faire noter la pertinence des diagnostics AIOps de 1 a 5 ;
+3. creer l'environnement GitHub `production` et ses secrets si un cluster distant
    doit recevoir le CD ;
-2. executer la collection Postman et conserver une capture des resultats pour la
+4. executer la collection Postman et conserver une capture des resultats pour la
    soutenance ;
-3. exporter les diagrammes Mermaid en PNG ou SVG pour le rapport ;
-4. inserer les captures GitHub Actions, Docker, Kubernetes et Postman dans le
+5. exporter les diagrammes Mermaid en PNG ou SVG pour le rapport ;
+6. inserer les captures GitHub Actions, Docker, Kubernetes et Postman dans le
    memoire ;
-5. capturer le dashboard Grafana, les cibles Prometheus et une alerte ;
-6. executer OWASP ZAP contre une URL de staging accessible ;
-7. preparer une courte demonstration orale fondee sur le portail, le pipeline
+7. capturer le dashboard Grafana, les cibles Prometheus et une alerte ;
+8. executer OWASP ZAP contre une URL de staging accessible ;
+9. preparer une courte demonstration orale fondee sur le portail, le pipeline
    et la boucle Shift Right.
 
 Le cluster de production et le rapport academique sont des livrables externes au
