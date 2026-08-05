@@ -14,9 +14,9 @@ ENV FLASK_APP=app.py
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
-RUN groupadd --system app \
-    && useradd --system --gid app --no-create-home app
+RUN groupadd --system --gid 10001 app \
+    && useradd --system --uid 10001 --gid 10001 --no-create-home app
 
-USER app
+USER 10001:10001
 
 CMD ["python", "app.py"]

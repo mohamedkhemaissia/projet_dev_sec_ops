@@ -1,0 +1,357 @@
+{
+  "info": {
+    "_postman_id": "f18a3b10-2b3f-4b93-bacd-918aa7c5c001",
+    "name": "TrainingHub - Demonstration PFE",
+    "description": "Scenario automatise de demonstration du backend TrainingHub. Demarrer Docker Compose, puis executer la collection dans l'ordre.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1 - Health checks",
+      "item": [
+        {
+          "name": "User Service health",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('User Service disponible', () => pm.response.to.have.status(200));",
+                "pm.test('Statut OK', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "url": "{{user_base_url}}/api/v1/users/health"
+          }
+        },
+        {
+          "name": "Course Service health",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Course Service disponible', () => pm.response.to.have.status(200));",
+                "pm.test('Statut OK', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "url": "{{course_base_url}}/api/v1/courses/health"
+          }
+        },
+        {
+          "name": "Certificate Service health",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Certificate Service disponible', () => pm.response.to.have.status(200));",
+                "pm.test('Statut OK', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "url": "{{certificate_base_url}}/api/v1/certificates/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 - Scenario metier complet",
+      "item": [
+        {
+          "name": "Creer un learner unique",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const runId = pm.variables.replaceIn('{{$guid}}');",
+                  "pm.collectionVariables.set('learner_email', `learner.${runId}@example.com`);",
+                  "pm.collectionVariables.set('course_title', `DevSecOps PFE ${runId.substring(0, 8)}`);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Learner cree', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('Role learner applique', () => pm.expect(body.role).to.eql('learner'));",
+                  "pm.collectionVariables.set('learner_id', body.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{learner_name}}\",\n  \"email\": \"{{learner_email}}\",\n  \"password\": \"{{learner_password}}\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "{{user_base_url}}/api/v1/users/register"
+          }
+        },
+        {
+          "name": "Connexion learner",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Connexion learner reussie', () => pm.response.to.have.status(200));",
+                "const body = pm.response.json();",
+                "pm.expect(body.token).to.be.a('string').and.not.empty;",
+                "pm.collectionVariables.set('learner_token', body.token);"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{learner_email}}\",\n  \"password\": \"{{learner_password}}\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "{{user_base_url}}/api/v1/users/login"
+          }
+        },
+        {
+          "name": "Connexion admin",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Connexion admin reussie', () => pm.response.to.have.status(200));",
+                "const body = pm.response.json();",
+                "pm.expect(body.user.role).to.eql('admin');",
+                "pm.collectionVariables.set('admin_token', body.token);"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "{{user_base_url}}/api/v1/users/login"
+          }
+        },
+        {
+          "name": "Securite - un learner ne peut pas creer un cours",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('RBAC bloque le learner', () => pm.response.to.have.status(403));",
+                "pm.test('Erreur forbidden', () => pm.expect(pm.response.json().error).to.eql('forbidden'));"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{learner_token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Cours interdit\",\n  \"description\": \"Cette creation doit etre refusee par le RBAC.\",\n  \"duration\": 1,\n  \"category\": \"Security\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "{{course_base_url}}/api/v1/courses"
+          }
+        },
+        {
+          "name": "Creer une formation comme admin",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Formation creee', () => pm.response.to.have.status(201));",
+                "const body = pm.response.json();",
+                "pm.expect(body.course.title).to.eql(pm.collectionVariables.get('course_title'));",
+                "pm.collectionVariables.set('course_id', body.course.id);"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{admin_token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"{{course_title}}\",\n  \"description\": \"Formation de demonstration sur la livraison logicielle securisee.\",\n  \"duration\": 24,\n  \"level\": \"beginner\",\n  \"category\": \"DevSecOps\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "{{course_base_url}}/api/v1/courses"
+          }
+        },
+        {
+          "name": "Inscrire le learner",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Inscription creee', () => pm.response.to.have.status(201));",
+                "const body = pm.response.json();",
+                "pm.expect(body.status).to.eql('enrolled');",
+                "pm.collectionVariables.set('enrollment_id', body.id);"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{learner_token}}"}],
+            "url": "{{course_base_url}}/api/v1/courses/{{course_id}}/enroll"
+          }
+        },
+        {
+          "name": "Terminer la formation comme admin",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Formation terminee', () => pm.response.to.have.status(200));",
+                "pm.test('Statut completed', () => pm.expect(pm.response.json().status).to.eql('completed'));"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{admin_token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"completed\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "{{course_base_url}}/api/v1/courses/enrollments/{{enrollment_id}}/status"
+          }
+        },
+        {
+          "name": "Emettre le certificat",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Certificat emis', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                "const body = pm.response.json();",
+                "pm.expect(body.status).to.eql('active');",
+                "pm.collectionVariables.set('certificate_id', body.id);",
+                "pm.collectionVariables.set('certificate_code', body.certificate_code);"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{learner_token}}"}],
+            "url": "{{certificate_base_url}}/api/v1/certificates/courses/{{course_id}}/issue"
+          }
+        },
+        {
+          "name": "Lister mes certificats",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Liste accessible', () => pm.response.to.have.status(200));",
+                "pm.test('Certificat present', () => {",
+                "  const certificates = pm.response.json();",
+                "  pm.expect(certificates.some(item => String(item.id) === String(pm.collectionVariables.get('certificate_id')))).to.be.true;",
+                "});"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{learner_token}}"}],
+            "url": "{{certificate_base_url}}/api/v1/certificates/me"
+          }
+        },
+        {
+          "name": "Verifier publiquement le certificat",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Verification publique reussie', () => pm.response.to.have.status(200));",
+                "const body = pm.response.json();",
+                "pm.expect(body.valid).to.be.true;",
+                "pm.expect(body.certificate.certificate_code).to.eql(pm.collectionVariables.get('certificate_code'));"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "url": "{{certificate_base_url}}/api/v1/certificates/verify/{{certificate_code}}"
+          }
+        },
+        {
+          "name": "Telecharger le certificat PDF",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('PDF telecharge', () => pm.response.to.have.status(200));",
+                "pm.test('Type PDF', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf'));",
+                "pm.test('PDF non vide', () => pm.expect(pm.response.responseSize).to.be.above(500));"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{learner_token}}"}],
+            "url": "{{certificate_base_url}}/api/v1/certificates/{{certificate_id}}/download"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {"key": "user_base_url", "value": "http://localhost:5001", "type": "string"},
+    {"key": "course_base_url", "value": "http://localhost:5002", "type": "string"},
+    {"key": "certificate_base_url", "value": "http://localhost:5004", "type": "string"},
+    {"key": "learner_name", "value": "Learner Demo", "type": "string"},
+    {"key": "learner_email", "value": "", "type": "string"},
+    {"key": "learner_password", "value": "LearnerDemo123!", "type": "string"},
+    {"key": "admin_email", "value": "admin@training.com", "type": "string"},
+    {"key": "admin_password", "value": "Admin123!", "type": "string"},
+    {"key": "learner_token", "value": "", "type": "string"},
+    {"key": "admin_token", "value": "", "type": "string"},
+    {"key": "learner_id", "value": "", "type": "string"},
+    {"key": "course_title", "value": "", "type": "string"},
+    {"key": "course_id", "value": "", "type": "string"},
+    {"key": "enrollment_id", "value": "", "type": "string"},
+    {"key": "certificate_id", "value": "", "type": "string"},
+    {"key": "certificate_code", "value": "", "type": "string"}
+  ]
+}

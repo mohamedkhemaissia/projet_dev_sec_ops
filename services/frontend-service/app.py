@@ -7,6 +7,7 @@ from flask_wtf.csrf import CSRFError, CSRFProtect
 
 from api_client import TrainingHubAPI
 from config import Config
+from observability import init_observability
 from routes.web import web_bp
 
 
@@ -28,6 +29,7 @@ def create_app(config_object=Config, api_client=None):
         app.config["API_TIMEOUT_SECONDS"],
     )
     app.register_blueprint(web_bp)
+    init_observability(app, "frontend-service")
 
     @app.context_processor
     def inject_identity():

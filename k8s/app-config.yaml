@@ -4,6 +4,7 @@ metadata:
   name: traininghub-config
   namespace: traininghub
 data:
+  APP_HOST: "0.0.0.0"
   FLASK_DEBUG: "false"
   JWT_EXPIRES_IN_MINUTES: "60"
   MYSQL_HOST: mysql

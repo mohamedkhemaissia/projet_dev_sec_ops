@@ -115,6 +115,17 @@ def test_home_has_custom_traininghub_identity(client):
     assert "frame-ancestors 'none'" in response.headers["Content-Security-Policy"]
 
 
+def test_prometheus_metrics(client):
+    client.get("/health")
+    response = client.get("/metrics")
+
+    body = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert response.headers["X-Request-ID"]
+    assert "traininghub_http_requests_total" in body
+    assert 'service="frontend-service"' in body
+
+
 def test_csrf_time_limit_is_expressed_in_seconds():
     assert isinstance(TestConfig.WTF_CSRF_TIME_LIMIT, int)
     assert TestConfig.WTF_CSRF_TIME_LIMIT == 7200

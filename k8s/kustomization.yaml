@@ -4,6 +4,7 @@ kind: Kustomization
 namespace: traininghub
 
 resources:
+  - frontend.yaml
   - namespace.yaml
   - secret.yaml
   - app-config.yaml
@@ -14,6 +15,8 @@ resources:
   - user-service-hpa.yaml
   - course-service-hpa.yaml
   - certificate-service-hpa.yaml
+  - frontend-service-hpa.yaml
+  - network-policies.yaml
   - ingress.yaml
 
 configMapGenerator:

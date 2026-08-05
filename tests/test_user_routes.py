@@ -61,9 +61,20 @@ def test_health(client):
     response = client.get("/api/v1/users/health")
     assert response.status_code == 200
     assert response.get_json()["status"] == "ok"
+    assert response.headers["X-Request-ID"]
     assert response.headers["X-Content-Type-Options"] == "nosniff"
     assert response.headers["X-Frame-Options"] == "DENY"
     assert response.headers["Referrer-Policy"] == "no-referrer"
+
+
+def test_prometheus_metrics(client):
+    client.get("/api/v1/users/health")
+    response = client.get("/metrics")
+
+    body = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert "traininghub_http_requests_total" in body
+    assert 'service="user-service"' in body
 
 
 @patch("routes.users.create_user")

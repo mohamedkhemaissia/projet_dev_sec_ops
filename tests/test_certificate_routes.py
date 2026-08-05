@@ -78,6 +78,17 @@ def test_health(client):
 
     assert response.status_code == 200
     assert response.get_json()["status"] == "ok"
+    assert response.headers["X-Request-ID"]
+
+
+def test_prometheus_metrics(client):
+    client.get("/api/v1/certificates/health")
+    response = client.get("/metrics")
+
+    body = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert "traininghub_http_requests_total" in body
+    assert 'service="certificate-service"' in body
 
 
 @patch("routes.certificates.create_certificate")

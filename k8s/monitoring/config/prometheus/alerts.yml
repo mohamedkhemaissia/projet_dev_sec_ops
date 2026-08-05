@@ -1,0 +1,47 @@
+groups:
+  - name: traininghub-runtime
+    rules:
+      - alert: TrainingHubServiceDown
+        expr: max by (service) (up{job="traininghub-services"}) == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Un service TrainingHub est indisponible"
+          description: "{{ $labels.service }} ne repond plus aux collectes Prometheus depuis une minute."
+
+      - alert: TrainingHubHighErrorRate
+        expr: |
+          (
+            sum by (service) (
+              rate(traininghub_http_requests_total{endpoint!~".*(/health|/metrics)$",status=~"5.."}[5m])
+            )
+            /
+            clamp_min(
+              sum by (service) (
+                rate(traininghub_http_requests_total{endpoint!~".*(/health|/metrics)$"}[5m])
+              ),
+              0.001
+            )
+          ) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Taux d'erreur HTTP eleve"
+          description: "{{ $labels.service }} depasse 5 % de reponses 5xx depuis deux minutes."
+
+      - alert: TrainingHubHighP95Latency
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le, service) (
+              rate(traininghub_http_request_duration_seconds_bucket{endpoint!~".*(/health|/metrics)$"}[5m])
+            )
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Latence p95 elevee"
+          description: "La latence p95 de {{ $labels.service }} depasse une seconde."
