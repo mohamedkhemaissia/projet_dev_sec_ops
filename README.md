@@ -332,6 +332,8 @@ Apres le demarrage Docker Compose, lancer un scenario controle avec :
 
 Le contrat, les limites de securite et le protocole d'evaluation sont detailles
 dans [`docs/aiops-architecture.md`](docs/aiops-architecture.md).
+Les premiers resultats comparatifs sont presentes dans
+[`docs/aiops-evaluation.md`](docs/aiops-evaluation.md).
 
 ## Documentation PFE
 
@@ -345,3 +347,4 @@ dans [`docs/aiops-architecture.md`](docs/aiops-architecture.md).
 - Shift Right et observabilite : `docs/observability-shift-right.md`
 - Matrice de couverture DevSecOps : `docs/devsecops-coverage.md`
 - Assistant AIOps : `docs/aiops-architecture.md`
+- Evaluation AIOps : `docs/aiops-evaluation.md`

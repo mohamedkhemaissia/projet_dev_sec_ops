@@ -50,6 +50,9 @@ Le profil local s'active explicitement :
 docker compose --profile ai up -d ollama
 docker compose exec ollama ollama pull gemma3:1b
 $env:AIOPS_MODEL_PROVIDER = "ollama"
+$env:OLLAMA_BASE_URL = "http://ollama:11434"
+$env:OLLAMA_MODEL = "gemma3:1b"
+$env:AIOPS_MODEL_TIMEOUT_SECONDS = "180"
 docker compose up -d --build --force-recreate ai-ops-service
 ```
 
@@ -71,3 +74,8 @@ pertinence des recommandations et validation humaine.
 La comparaison principale opposera le temps de qualification manuelle au temps de
 qualification assistee. Le rapport distinguera clairement les sorties du modele,
 les regles de secours et les decisions finales de l'operateur.
+
+La premiere evaluation d'integration et son interpretation sont documentees dans
+`docs/aiops-evaluation.md`. Elle a conduit a ajouter un garde-fou qui interdit au
+modele de diminuer la severite emise par Alertmanager tout en conservant sa
+classification brute dans les preuves.

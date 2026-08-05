@@ -20,7 +20,7 @@
 | Demonstration | Termine | Portail web et collection Postman testée de bout en bout |
 | Documentation securite | Termine | Politique de securite et threat model STRIDE |
 | Diagrammes | Termine | Architecture, parcours metier et pipeline CI/CD |
-| Assistant AIOps | Implemente, evaluation LLM restante | Webhook Alertmanager, enrichissement Prometheus, regles de secours, client Ollama et evaluation CSV |
+| Assistant AIOps | MVP implemente et evalue | Webhook Alertmanager, Prometheus, Ollama local, garde-fous et deux evaluations CSV |
 
 ## Extension AIOps du 5 aout 2026
 
@@ -35,10 +35,16 @@
 - image AIOps non-root validee avec Gunicorn et filesystem en lecture seule ;
 - baseline de trois incidents enregistree dans
   `docs/evidence/aiops-rules-baseline.csv`.
+- modele local `gemma3:1b` telecharge et trois diagnostics reels generes sans
+  fallback ;
+- evaluation Ollama enregistree dans
+  `docs/evidence/aiops-ollama-evaluation.csv` ;
+- garde-fou ajoute apres observation de deux sous-estimations de severite sur
+  trois sorties brutes du modele.
 
-Le telechargement initial de l'image Ollama n'a pas termine dans la fenetre locale.
-Les resultats `rules` ne doivent donc pas etre presentes comme des resultats LLM.
-L'evaluation `ollama` reste a executer puis a faire noter manuellement.
+L'evaluation actuelle valide l'integration et les mecanismes de securite. Elle ne
+prouve pas encore la precision de cause racine, car les alertes sont synthetiques
+et une seule repetition a ete executee par scenario.
 
 ## Validations locales du 27 juillet 2026
 
@@ -67,7 +73,7 @@ L'evaluation `ollama` reste a executer puis a faire noter manuellement.
 
 Ces actions ne demandent plus de developpement :
 
-1. terminer le telechargement Ollama et produire `aiops-ollama-evaluation.csv` ;
+1. provoquer de vrais incidents controles et executer au moins cinq repetitions ;
 2. faire noter la pertinence des diagnostics AIOps de 1 a 5 ;
 3. creer l'environnement GitHub `production` et ses secrets si un cluster distant
    doit recevoir le CD ;

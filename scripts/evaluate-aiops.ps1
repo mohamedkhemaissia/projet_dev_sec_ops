@@ -78,8 +78,16 @@ foreach ($scenario in $scenarios) {
             iteration = $iteration
             analysis_mode = $incident.analysis.analysis_mode
             expected_severity = $scenario.ExpectedSeverity
+            model_severity = $incident.analysis.model_severity
             predicted_severity = $incident.analysis.severity
+            model_severity_match = if ($null -eq $incident.analysis.model_severity) {
+                ""
+            }
+            else {
+                $incident.analysis.model_severity -eq $scenario.ExpectedSeverity
+            }
             severity_match = $incident.analysis.severity -eq $scenario.ExpectedSeverity
+            severity_adjusted = $incident.analysis.severity_adjusted
             confidence = $incident.analysis.confidence
             request_latency_ms = $stopwatch.ElapsedMilliseconds
             model_duration_ms = $modelDurationMs

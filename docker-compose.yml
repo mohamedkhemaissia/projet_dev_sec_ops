@@ -171,6 +171,7 @@ services:
       PROMETHEUS_URL: http://prometheus:9090
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma3:1b}
+      AIOPS_MODEL_TIMEOUT_SECONDS: ${AIOPS_MODEL_TIMEOUT_SECONDS:-180}
 
   # --- MODELE LOCAL OPTIONNEL : docker compose --profile ai up -d ollama ---
   ollama:

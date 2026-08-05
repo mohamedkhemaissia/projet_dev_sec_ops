@@ -200,7 +200,7 @@ def test_ollama_valid_json_is_bounded_and_records_model_metrics():
                 {
                     "summary": "Le service ne repond plus.",
                     "probable_cause": "Le conteneur est probablement arrete.",
-                    "severity": "critical",
+                    "severity": "info",
                     "confidence": 0.74,
                     "recommendations": ["Verifier l'etat du conteneur."],
                 }
@@ -218,11 +218,24 @@ def test_ollama_valid_json_is_bounded_and_records_model_metrics():
 
     with patch("analyzer.requests.post", return_value=model_response) as post:
         result = analyzer.analyze(
-            {"alertname": "TrainingHubServiceDown", "service": "user-service"}
+            {
+                "alertname": "TrainingHubServiceDown",
+                "service": "user-service",
+                "severity": "critical",
+            }
         )
 
     assert result["analysis_mode"] == "ollama"
     assert result["confidence"] == 0.74
+    assert result["model_severity"] == "info"
+    assert result["severity"] == "critical"
+    assert result["severity_adjusted"] is True
     assert result["model_metrics"]["output_tokens"] == 45
     assert post.call_args.kwargs["json"]["stream"] is False
-    assert post.call_args.kwargs["json"]["format"] == "json"
+    schema = post.call_args.kwargs["json"]["format"]
+    assert schema["properties"]["severity"]["enum"] == [
+        "critical",
+        "info",
+        "warning",
+    ]
+    assert schema["additionalProperties"] is False
