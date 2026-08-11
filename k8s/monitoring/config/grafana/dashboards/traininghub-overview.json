@@ -151,6 +151,8 @@
               "mode": "none"
             }
           },
+          "max": 1,
+          "min": 0,
           "unit": "percentunit"
         },
         "overrides": []
