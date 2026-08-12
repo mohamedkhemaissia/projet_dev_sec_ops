@@ -172,6 +172,7 @@ jobs:
           only-fixed: true
           exit-code: true
           summary: true
+          write-comment: false
 
       - name: Docker Scout scan on course-service
         uses: docker/scout-action@v1
@@ -182,6 +183,7 @@ jobs:
           only-fixed: true
           exit-code: true
           summary: true
+          write-comment: false
 
       - name: Docker Scout scan on certificate-service
         uses: docker/scout-action@v1
@@ -192,6 +194,7 @@ jobs:
           only-fixed: true
           exit-code: true
           summary: true
+          write-comment: false
 
       - name: Docker Scout scan on frontend-service
         uses: docker/scout-action@v1
@@ -202,6 +205,7 @@ jobs:
           only-fixed: true
           exit-code: true
           summary: true
+          write-comment: false
 
       - name: Docker Scout scan on ai-ops-service
         uses: docker/scout-action@v1
@@ -212,6 +216,7 @@ jobs:
           only-fixed: true
           exit-code: true
           summary: true
+          write-comment: false
 
   publish:
     runs-on: ubuntu-latest
