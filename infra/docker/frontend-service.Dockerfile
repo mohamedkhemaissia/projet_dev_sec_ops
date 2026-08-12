@@ -13,7 +13,10 @@ RUN addgroup --system --gid 10001 traininghub \
     && adduser --system --uid 10001 --ingroup traininghub traininghub
 
 COPY services/frontend-service/requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir --requirement requirements.txt
+RUN pip install --no-cache-dir --requirement requirements.txt \
+    && pip uninstall --yes setuptools wheel \
+    && pip uninstall --yes pip \
+    && rm -rf /usr/local/lib/python*/ensurepip
 
 COPY services/frontend-service/app.py services/frontend-service/config.py services/frontend-service/api_client.py services/frontend-service/observability.py ./
 COPY services/frontend-service/routes ./routes

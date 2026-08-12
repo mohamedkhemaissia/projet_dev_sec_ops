@@ -9,7 +9,10 @@ WORKDIR /app
 RUN groupadd --system app && useradd --system --gid app --no-create-home app
 
 COPY services/ai-ops-service/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip uninstall --yes setuptools wheel \
+    && pip uninstall --yes pip \
+    && rm -rf /usr/local/lib/python*/ensurepip
 
 COPY services/ai-ops-service/ .
 
