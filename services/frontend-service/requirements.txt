@@ -4,4 +4,4 @@ Flask-WTF>=1.2
 cachelib>=0.13
 gunicorn>=26.0
 requests>=2.32
-prometheus-client>=0.20
+prometheus-client>=0.26.0
