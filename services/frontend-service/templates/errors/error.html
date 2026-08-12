@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Erreur {{ code }} — TrainingHub{% endblock %}
+{% block public_content %}
+<section class="error-page">
+    <div class="error-orbit"><span>{{ code }}</span></div>
+    {% if code == 404 %}
+        <h1>Cette page s’est égarée.</h1><p>Le contenu recherché n’existe pas ou a été déplacé.</p>
+    {% elif code == 403 %}
+        <h1>Accès non autorisé.</h1><p>Votre rôle ne permet pas d’accéder à cet espace.</p>
+    {% else %}
+        <h1>Une erreur est survenue.</h1><p>Notre service rencontre un problème temporaire.</p>
+    {% endif %}
+    <a class="btn btn-primary" href="{{ url_for('web.dashboard') if is_authenticated else url_for('web.home') }}"><i class="bi bi-arrow-left"></i> Revenir en lieu sûr</a>
+</section>
+{% endblock %}
+{% block content %}
+<section class="error-page">
+    <div class="error-orbit"><span>{{ code }}</span></div>
+    <h1>{{ "Accès non autorisé." if code == 403 else "Cette page s’est égarée." if code == 404 else "Une erreur est survenue." }}</h1>
+    <p>{{ "Votre rôle ne permet pas d’accéder à cet espace." if code == 403 else "Le contenu recherché n’existe pas ou a été déplacé." if code == 404 else "Notre service rencontre un problème temporaire." }}</p>
+    <a class="btn btn-primary" href="{{ url_for('web.dashboard') }}"><i class="bi bi-arrow-left"></i> Retour au tableau de bord</a>
+</section>
+{% endblock %}

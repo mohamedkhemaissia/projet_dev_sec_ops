@@ -39,7 +39,7 @@ repos:
 
       - id: bandit
         name: Bandit security scan
-        entry: .venv/Scripts/python.exe -m bandit -r services
+        entry: .venv/Scripts/python.exe -m bandit -r services -x services/frontend-service/tests
         language: system
         pass_filenames: false
         stages:
@@ -47,7 +47,7 @@ repos:
 
       - id: pytest
         name: Pytest with coverage threshold
-        entry: .venv/Scripts/python.exe -m pytest tests -q --cov=services --cov-report=term-missing --cov-fail-under=55
+        entry: .venv/Scripts/python.exe -m pytest tests services/frontend-service/tests -q --cov=services --cov-report=term-missing --cov-fail-under=55
         language: system
         pass_filenames: false
         stages:

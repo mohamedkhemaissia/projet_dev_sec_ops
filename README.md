@@ -1,17 +1,21 @@
-# TrainingHub Backend API
+# TrainingHub
 
-Projet PFE DevSecOps base sur une plateforme backend de gestion des formations,
+Projet PFE DevSecOps basé sur une plateforme web de gestion des formations,
 des inscriptions et des certificats.
 
-Le monorepo contient trois microservices Python/Flask et une base MySQL unique:
+Le monorepo contient trois microservices métier Python/Flask, un service de
+présentation web et une base MySQL unique:
 
 - `user-service`: inscription, connexion JWT, profils et roles.
 - `course-service`: catalogue de formations et inscriptions.
 - `certificate-service`: emission et verification des certificats.
+- `frontend-service`: portail Jinja2/Bootstrap pour les espaces public, learner
+  et admin.
 - `mysql`: base unique `training_platform_db`.
 
-La partie frontend, le chatbot et les avatars ne font plus partie du perimetre de livraison.
-La demonstration fonctionnelle se fait avec Postman.
+La démonstration fonctionnelle principale se fait avec le portail web. La
+collection Postman reste disponible pour démontrer et vérifier directement les
+contrats des API.
 
 ## Securite applicative
 
@@ -54,10 +58,17 @@ docker compose up --build
 
 Services exposes:
 
+- Frontend TrainingHub: `http://localhost:3000`
 - User Service: `http://localhost:5001`
 - Course Service: `http://localhost:5002`
 - Certificate Service: `http://localhost:5004`
 - MySQL: `localhost:3306`
+- Prometheus: `http://localhost:9090`
+- Grafana: `http://localhost:3001`
+- Alertmanager: `http://localhost:9093`
+
+Le dashboard `TrainingHub - Shift Right` est provisionne automatiquement dans
+Grafana. Les quatre services exposent leurs metriques sur `/metrics`.
 
 Si un ancien volume MySQL contient les anciennes tables, reinitialiser le volume:
 
@@ -72,8 +83,9 @@ docker compose up --build
 pip install -r services/user-service/requirements.txt
 pip install -r services/course-service/requirements.txt
 pip install -r services/certificate-service/requirements.txt
+pip install -r services/frontend-service/requirements.txt
 pip install -r requirements-test.txt
-.\.venv\Scripts\python.exe -m pytest tests/ -v
+.\.venv\Scripts\python.exe -m pytest tests/ services/frontend-service/tests/ -v
 ```
 
 Ou:
@@ -110,6 +122,10 @@ La politique de securite se trouve dans `SECURITY.md` et le threat model STRIDE
 dans `docs/security/threat-model.md`.
 
 ## Scenario Postman
+
+Une collection directement importable et auto-verifiee est disponible dans
+`postman/TrainingHub.postman_collection.json`. Son guide d'utilisation se trouve
+dans `postman/README.md`.
 
 ### 1. Health checks
 
@@ -267,11 +283,68 @@ Certificate Service:
 A chaque push sur `main` ou `develop`, GitHub Actions execute:
 
 1. Gitleaks + Flake8 + Pytest (couverture minimale de 55 %) + Bandit + pip-audit
-2. Build Docker + scan Docker Scout des vulnerabilites critiques et hautes corrigibles
-3. Push des images vers ghcr.io sur `main`
+2. Tests du service frontend, de ses pages et de ses contrôles d'accès
+3. Rendu Kustomize et scan de securite IaC avec Trivy
+4. Build Docker + scan Docker Scout des vulnerabilites critiques et hautes corrigibles
+5. Push des images vers ghcr.io sur `main`
+6. Deploiement Kubernetes apres validation de l'environnement `production`
+7. Verification des rollouts et smoke tests des quatre services
+8. DAST OWASP ZAP sur l'environnement de staging configure
 
 Images construites:
 
 - `user-service`
 - `course-service`
 - `certificate-service`
+- `frontend-service`
+
+La configuration du CD, des secrets GitHub et du rollback est documentee dans
+`docs/deployment/cd-kubernetes.md`.
+
+## Shift Right
+
+Le projet ferme la boucle apres le deploiement avec :
+
+- metriques Prometheus sur les services applicatifs et AIOps ;
+- dashboard Grafana provisionne automatiquement dans Docker Compose et Kubernetes ;
+- alertes de disponibilite, taux d'erreur et latence ;
+- logs JSON correles par `X-Request-ID` ;
+- health checks Kubernetes, smoke tests et rollback ;
+- scan DAST OWASP ZAP manuel, planifie ou post-deploiement.
+
+Voir `docs/observability-shift-right.md` pour le lancement, les requetes PromQL,
+la demonstration d'une alerte et la configuration du DAST.
+Le deploiement Kubernetes du monitoring est documente dans
+`k8s/monitoring/README.md`.
+
+### Assistant AIOps
+
+TrainingHub inclut un assistant d'analyse d'incidents en lecture seule. Il recoit
+les alertes d'Alertmanager, enrichit le contexte depuis Prometheus et genere un
+diagnostic structure. Le mode `rules` est reproductible sans modele ; le mode
+`ollama` active une analyse LLM locale avec repli automatique.
+
+Apres le demarrage Docker Compose, lancer un scenario controle avec :
+
+```powershell
+.\scripts\run-aiops-scenario.ps1
+```
+
+Le contrat, les limites de securite et le protocole d'evaluation sont detailles
+dans [`docs/aiops-architecture.md`](docs/aiops-architecture.md).
+Les premiers resultats comparatifs sont presentes dans
+[`docs/aiops-evaluation.md`](docs/aiops-evaluation.md).
+
+## Documentation PFE
+
+- Etat final et actions de soutenance : `docs/project-status.md`
+- Deroule de demonstration : `docs/demo-soutenance.md`
+- Architecture technique : `docs/diagrams/architecture.md`
+- Architecture du portail web : `docs/frontend-architecture.md`
+- Parcours metier : `docs/diagrams/business-flow.md`
+- Pipeline DevSecOps : `docs/diagrams/ci-cd-pipeline.md`
+- Modele de menaces STRIDE : `docs/security/threat-model.md`
+- Shift Right et observabilite : `docs/observability-shift-right.md`
+- Matrice de couverture DevSecOps : `docs/devsecops-coverage.md`
+- Assistant AIOps : `docs/aiops-architecture.md`
+- Evaluation AIOps : `docs/aiops-evaluation.md`

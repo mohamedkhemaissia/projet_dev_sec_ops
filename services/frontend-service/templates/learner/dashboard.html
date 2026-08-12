@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import course_card, status_badge, empty_state %}
+{% block title %}Mon espace — TrainingHub{% endblock %}
+{% block page_name %}Vue d’ensemble{% endblock %}
+{% block content %}
+<section class="welcome-banner">
+    <div>
+        <span class="eyebrow">Votre espace apprenant</span>
+        <h1>Bonjour {{ current_user.name.split()[0] }} <span>👋</span></h1>
+        <p>Chaque étape compte. Reprenez votre progression ou découvrez votre prochaine formation.</p>
+    </div>
+    <a class="btn btn-light" href="{{ url_for('web.courses') }}">Explorer le catalogue <i class="bi bi-arrow-right"></i></a>
+    <div class="banner-shape shape-one"></div>
+    <div class="banner-shape shape-two"></div>
+</section>
+
+<section class="stats-grid">
+    <article class="stat-card stat-violet">
+        <span class="stat-icon"><i class="bi bi-journal-bookmark-fill"></i></span>
+        <div><strong>{{ stats.courses }}</strong><span>Formations suivies</span></div>
+        <i class="bi bi-arrow-up-right stat-arrow"></i>
+    </article>
+    <article class="stat-card stat-cyan">
+        <span class="stat-icon"><i class="bi bi-play-circle-fill"></i></span>
+        <div><strong>{{ stats.in_progress }}</strong><span>En cours</span></div>
+        <i class="bi bi-activity stat-arrow"></i>
+    </article>
+    <article class="stat-card stat-green">
+        <span class="stat-icon"><i class="bi bi-trophy-fill"></i></span>
+        <div><strong>{{ stats.completed }}</strong><span>Terminées</span></div>
+        <i class="bi bi-stars stat-arrow"></i>
+    </article>
+    <article class="stat-card stat-orange">
+        <span class="stat-icon"><i class="bi bi-patch-check-fill"></i></span>
+        <div><strong>{{ stats.certificates }}</strong><span>Certificats</span></div>
+        <i class="bi bi-award stat-arrow"></i>
+    </article>
+</section>
+
+<div class="content-grid">
+    <section class="panel">
+        <div class="panel-heading">
+            <div><span class="eyebrow">Votre progression</span><h2>Continuer à apprendre</h2></div>
+            <a href="{{ url_for('web.learner_enrollments') }}">Tout afficher <i class="bi bi-arrow-right"></i></a>
+        </div>
+        {% if enrollments %}
+            <div class="learning-list">
+                {% for item in enrollments %}
+                    <article class="learning-item">
+                        <div class="learning-icon cover-{{ ['violet', 'cyan', 'orange'][loop.index0 % 3] }}">
+                            <i class="bi bi-{{ 'shield-lock' if 'devsecops' in item.category|lower else 'code-slash' }}"></i>
+                        </div>
+                        <div class="learning-copy">
+                            <div class="d-flex justify-content-between gap-2">
+                                <span>{{ item.category }}</span>{{ status_badge(item.status) }}
+                            </div>
+                            <h3>{{ item.title }}</h3>
+                            <div class="progress-track"><span data-progress="{{ 100 if item.status == 'completed' else 55 if item.status == 'in_progress' else 10 }}"></span></div>
+                        </div>
+                        <a class="icon-button" href="{{ url_for('web.course_detail', course_id=item.course_id) }}" aria-label="Ouvrir"><i class="bi bi-arrow-up-right"></i></a>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            {{ empty_state('bi-journal-plus', 'Votre parcours commence ici', 'Inscrivez-vous à une première formation pour suivre votre progression.', url_for('web.courses'), 'Découvrir les formations') }}
+        {% endif %}
+    </section>
+
+    <aside class="panel achievement-panel">
+        <div class="panel-heading"><div><span class="eyebrow">Objectif</span><h2>Votre dynamique</h2></div></div>
+        <div class="achievement-ring" data-progress="{{ [stats.completed * 20, 100]|min }}">
+            <div><strong>{{ [stats.completed * 20, 100]|min }}%</strong><span>Objectif</span></div>
+        </div>
+        <p>Continuez votre parcours pour débloquer de nouveaux certificats.</p>
+        <div class="mini-achievements">
+            <span class="{{ 'unlocked' if stats.courses > 0 }}"><i class="bi bi-rocket-takeoff"></i></span>
+            <span class="{{ 'unlocked' if stats.completed > 0 }}"><i class="bi bi-check2-circle"></i></span>
+            <span class="{{ 'unlocked' if stats.certificates > 0 }}"><i class="bi bi-award"></i></span>
+        </div>
+    </aside>
+</div>
+
+{% if recommended %}
+<section class="section-block">
+    <div class="panel-heading">
+        <div><span class="eyebrow">Sélection pour vous</span><h2>Prochaines formations à explorer</h2></div>
+        <a href="{{ url_for('web.courses') }}">Voir le catalogue <i class="bi bi-arrow-right"></i></a>
+    </div>
+    <div class="course-grid">
+        {% for course in recommended %}{{ course_card(course) }}{% endfor %}
+    </div>
+</section>
+{% endif %}
+{% endblock %}

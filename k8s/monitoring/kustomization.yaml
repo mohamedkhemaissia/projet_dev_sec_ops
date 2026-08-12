@@ -1,0 +1,37 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: monitoring
+
+resources:
+  - namespace.yaml
+  - aiops-secret.yaml
+  - rbac.yaml
+  - prometheus.yaml
+  - alertmanager.yaml
+  - grafana.yaml
+  - network-policies.yaml
+
+configMapGenerator:
+  - name: prometheus-config
+    files:
+      - prometheus.yml=config/prometheus/prometheus.yml
+      - alerts.yml=config/prometheus/alerts.yml
+  - name: alertmanager-config
+    files:
+      - alertmanager.yml=config/alertmanager/alertmanager.yml
+  - name: grafana-datasource
+    files:
+      - prometheus.yml=config/grafana/provisioning/datasources/prometheus.yml
+  - name: grafana-dashboard-provider
+    files:
+      - traininghub.yml=config/grafana/provisioning/dashboards/traininghub.yml
+  - name: grafana-dashboard
+    files:
+      - traininghub-overview.json=config/grafana/dashboards/traininghub-overview.json
+
+generatorOptions:
+  disableNameSuffixHash: true
+  labels:
+    app.kubernetes.io/part-of: traininghub
+    app.kubernetes.io/component: observability

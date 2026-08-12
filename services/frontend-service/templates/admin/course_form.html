@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ form_title }} — TrainingHub{% endblock %}
+{% block page_name %}{{ form_title }}{% endblock %}
+{% block content %}
+<a class="back-link mb-4 d-inline-flex" href="{{ url_for('web.admin_courses') }}"><i class="bi bi-arrow-left"></i> Retour aux formations</a>
+<div class="form-layout">
+    <section class="panel profile-form">
+        <div class="panel-heading"><div><span class="eyebrow">Contenu pédagogique</span><h1>{{ form_title }}</h1><p>Renseignez les informations visibles par les apprenants.</p></div></div>
+        <form method="post" class="modern-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group">
+                <label for="title">Titre de la formation</label>
+                <div class="input-wrap"><i class="bi bi-type-h1"></i><input class="form-control" id="title" name="title" value="{{ course.get('title', '') }}" minlength="3" maxlength="150" placeholder="Ex. DevSecOps Fundamentals" required></div>
+            </div>
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea class="form-control" id="description" name="description" rows="6" minlength="10" maxlength="5000" placeholder="Présentez les objectifs et le contenu du parcours..." required>{{ course.get('description', '') }}</textarea>
+                <small class="form-help">Une description claire aide l’apprenant à choisir le bon parcours.</small>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-4 form-group">
+                    <label for="duration">Durée en heures</label>
+                    <div class="input-wrap"><i class="bi bi-clock"></i><input class="form-control" type="number" min="1" max="10000" step="0.5" id="duration" name="duration" value="{{ course.get('duration', '') }}" required></div>
+                </div>
+                <div class="col-md-4 form-group">
+                    <label for="level">Niveau</label>
+                    <select class="form-select" id="level" name="level">
+                        {% for value, label in [('beginner', 'Débutant'), ('intermediate', 'Intermédiaire'), ('advanced', 'Avancé')] %}
+                        <option value="{{ value }}" {{ 'selected' if course.get('level', 'beginner') == value }}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4 form-group">
+                    <label for="category">Catégorie</label>
+                    <div class="input-wrap"><i class="bi bi-tag"></i><input class="form-control" id="category" name="category" value="{{ course.get('category', '') }}" minlength="2" maxlength="100" placeholder="Ex. DevSecOps" required></div>
+                </div>
+            </div>
+            <div class="form-actions">
+                <a class="btn btn-soft" href="{{ url_for('web.admin_courses') }}">Annuler</a>
+                <button class="btn btn-primary" type="submit">{{ submit_label }} <i class="bi bi-arrow-right"></i></button>
+            </div>
+        </form>
+    </section>
+    <aside class="form-tips">
+        <div class="tips-icon"><i class="bi bi-lightbulb"></i></div>
+        <h2>Pour une fiche efficace</h2>
+        <ul>
+            <li><i class="bi bi-check2"></i><span><strong>Un titre précis</strong> qui annonce clairement la compétence.</span></li>
+            <li><i class="bi bi-check2"></i><span><strong>Une description concrète</strong> orientée objectifs.</span></li>
+            <li><i class="bi bi-check2"></i><span><strong>Un niveau réaliste</strong> pour guider les apprenants.</span></li>
+        </ul>
+        <div class="security-note light"><i class="bi bi-shield-check"></i><div><strong>Validation sécurisée</strong><small>Les données sont vérifiées par l’API.</small></div></div>
+    </aside>
+</div>
+{% endblock %}

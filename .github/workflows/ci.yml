@@ -41,21 +41,32 @@ jobs:
           pip install -r services/user-service/requirements.txt
           pip install -r services/course-service/requirements.txt
           pip install -r services/certificate-service/requirements.txt
+          pip install -r services/frontend-service/requirements.txt
+          pip install -r services/ai-ops-service/requirements.txt
           pip install -r requirements-test.txt
 
       - name: Flake8 check
         run: flake8 services tests --max-line-length=120 --extend-ignore=E501,W503
 
       - name: Pytest with coverage threshold
-        run: >-
-          python -m pytest tests -v
-          --cov=services
-          --cov-report=term-missing
-          --cov-report=xml
-          --cov-fail-under=55
+        run: |
+          python -m pytest tests -v \
+            --cov=services \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            --cov-fail-under=55
+          python -m pytest services/frontend-service/tests -v
+
+      - name: Upload coverage evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: traininghub-coverage
+          path: coverage.xml
+          if-no-files-found: error
 
       - name: Bandit check
-        run: bandit -r services
+        run: bandit -r services -x services/frontend-service/tests
 
       - name: pip-audit dependency scan
         uses: pypa/gh-action-pip-audit@v1.1.0
@@ -64,10 +75,68 @@ jobs:
             services/user-service/requirements.txt
             services/course-service/requirements.txt
             services/certificate-service/requirements.txt
+            services/frontend-service/requirements.txt
+
+  infrastructure-security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.36.1
+
+      - name: Render production and monitoring manifests
+        run: |
+          mkdir -p rendered
+          kubectl kustomize k8s/overlays/production \
+            --load-restrictor=LoadRestrictionsNone \
+            > rendered/traininghub-production.yaml
+          kubectl kustomize k8s/monitoring \
+            > rendered/traininghub-monitoring.yaml
+
+      - name: Validate rendered Kubernetes manifests
+        run: |
+          docker run --rm \
+            -v "${PWD}/rendered:/manifests:ro" \
+            ghcr.io/yannh/kubeconform:v0.7.0 \
+            -strict \
+            -summary \
+            /manifests/traininghub-production.yaml \
+            /manifests/traininghub-monitoring.yaml
+
+      - name: Validate monitoring configuration
+        run: |
+          docker run --rm --entrypoint promtool \
+            -v "${PWD}/infra/monitoring/prometheus:/etc/prometheus:ro" \
+            prom/prometheus:v3.5.0 \
+            check config /etc/prometheus/prometheus.yml
+          docker run --rm --entrypoint promtool \
+            -v "${PWD}/k8s/monitoring/config/prometheus:/etc/prometheus:ro" \
+            prom/prometheus:v3.5.0 \
+            check config /etc/prometheus/prometheus.yml
+          docker run --rm --entrypoint amtool \
+            -v "${PWD}/k8s/monitoring/config/alertmanager:/etc/alertmanager:ro" \
+            prom/alertmanager:v0.28.1 \
+            check-config /etc/alertmanager/alertmanager.yml
+
+      - name: Trivy IaC security scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: config
+          scan-ref: rendered
+          format: table
+          severity: CRITICAL
+          exit-code: "1"
 
   build:
     runs-on: ubuntu-latest
-    needs: quality
+    needs:
+      - quality
+      - infrastructure-security
 
     steps:
       - name: Checkout
@@ -81,6 +150,12 @@ jobs:
 
       - name: Build certificate-service
         run: docker build -f infra/docker/certificate-service.Dockerfile -t certificate-service:latest .
+
+      - name: Build frontend-service
+        run: docker build -f infra/docker/frontend-service.Dockerfile -t frontend-service:latest .
+
+      - name: Build ai-ops-service
+        run: docker build -f infra/docker/ai-ops-service.Dockerfile -t ai-ops-service:latest .
 
       - name: Login to Docker Hub for Docker Scout
         uses: docker/login-action@v4
@@ -97,6 +172,7 @@ jobs:
           only-fixed: true
           exit-code: true
           summary: true
+          write-comment: false
 
       - name: Docker Scout scan on course-service
         uses: docker/scout-action@v1
@@ -107,6 +183,7 @@ jobs:
           only-fixed: true
           exit-code: true
           summary: true
+          write-comment: false
 
       - name: Docker Scout scan on certificate-service
         uses: docker/scout-action@v1
@@ -117,6 +194,29 @@ jobs:
           only-fixed: true
           exit-code: true
           summary: true
+          write-comment: false
+
+      - name: Docker Scout scan on frontend-service
+        uses: docker/scout-action@v1
+        with:
+          command: cves
+          image: local://frontend-service:latest
+          only-severities: critical,high
+          only-fixed: true
+          exit-code: true
+          summary: true
+          write-comment: false
+
+      - name: Docker Scout scan on ai-ops-service
+        uses: docker/scout-action@v1
+        with:
+          command: cves
+          image: local://ai-ops-service:latest
+          only-severities: critical,high
+          only-fixed: true
+          exit-code: true
+          summary: true
+          write-comment: false
 
   publish:
     runs-on: ubuntu-latest
@@ -160,3 +260,19 @@ jobs:
             -t ${{ env.IMAGE_PREFIX }}/certificate-service:latest .
           docker push ${{ env.IMAGE_PREFIX }}/certificate-service:${{ github.run_number }}
           docker push ${{ env.IMAGE_PREFIX }}/certificate-service:latest
+
+      - name: Build and push frontend-service
+        run: |
+          docker build -f infra/docker/frontend-service.Dockerfile \
+            -t ${{ env.IMAGE_PREFIX }}/frontend-service:${{ github.run_number }} \
+            -t ${{ env.IMAGE_PREFIX }}/frontend-service:latest .
+          docker push ${{ env.IMAGE_PREFIX }}/frontend-service:${{ github.run_number }}
+          docker push ${{ env.IMAGE_PREFIX }}/frontend-service:latest
+
+      - name: Build and push ai-ops-service
+        run: |
+          docker build -f infra/docker/ai-ops-service.Dockerfile \
+            -t ${{ env.IMAGE_PREFIX }}/ai-ops-service:${{ github.run_number }} \
+            -t ${{ env.IMAGE_PREFIX }}/ai-ops-service:latest .
+          docker push ${{ env.IMAGE_PREFIX }}/ai-ops-service:${{ github.run_number }}
+          docker push ${{ env.IMAGE_PREFIX }}/ai-ops-service:latest

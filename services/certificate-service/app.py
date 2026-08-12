@@ -6,6 +6,7 @@ from flask_cors import CORS
 
 from config import Config
 from db.connection import ensure_certificates_schema
+from observability import init_observability
 from routes.certificates import certificates_bp
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -17,6 +18,7 @@ def create_app():
     CORS(app, resources={r"/*": {"origins": app.config["CORS_ORIGINS"]}})
 
     app.register_blueprint(certificates_bp)
+    init_observability(app, Config.SERVICE_NAME)
 
     @app.after_request
     def add_security_headers(response):

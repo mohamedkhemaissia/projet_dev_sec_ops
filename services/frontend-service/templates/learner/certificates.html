@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import status_badge, empty_state %}
+{% block title %}Mes certificats — TrainingHub{% endblock %}
+{% block page_name %}Mes certificats{% endblock %}
+{% block content %}
+<div class="page-heading">
+    <div><span class="eyebrow">Vos réussites</span><h1>Portefeuille de certificats</h1><p>Téléchargez et partagez la preuve vérifiable de vos compétences.</p></div>
+    <a class="btn btn-soft" href="{{ url_for('web.verify') }}"><i class="bi bi-upc-scan"></i> Vérifier un code</a>
+</div>
+{% if certificates %}
+<div class="certificate-grid">
+    {% for certificate in certificates %}
+    <article class="certificate-card">
+        <div class="certificate-top">
+            <span class="certificate-logo"><i class="bi bi-layers-half"></i></span>
+            {{ status_badge(certificate.status) }}
+        </div>
+        <div class="certificate-seal"><i class="bi bi-patch-check-fill"></i></div>
+        <span class="eyebrow">Certificat de réussite</span>
+        <h2>{{ certificate.course_title }}</h2>
+        <p>{{ certificate.category }} · {{ certificate.level|status_label }}</p>
+        <div class="certificate-code"><span>Code unique</span><strong>{{ certificate.certificate_code }}</strong></div>
+        <div class="certificate-actions">
+            <a class="btn btn-primary" href="{{ url_for('web.download_certificate', certificate_id=certificate.id) }}"><i class="bi bi-download"></i> Télécharger PDF</a>
+            <a class="icon-button" href="{{ url_for('web.verify', code=certificate.certificate_code) }}" aria-label="Vérifier"><i class="bi bi-box-arrow-up-right"></i></a>
+        </div>
+    </article>
+    {% endfor %}
+</div>
+{% else %}
+    {{ empty_state('bi-award', 'Vos futurs certificats apparaîtront ici', 'Terminez une formation pour obtenir votre première certification.', url_for('web.learner_enrollments'), 'Voir mon parcours') }}
+{% endif %}
+{% endblock %}

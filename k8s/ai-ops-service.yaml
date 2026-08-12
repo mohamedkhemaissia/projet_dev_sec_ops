@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-ops-service
+  namespace: traininghub
+  labels:
+    app: ai-ops-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-ops-service
+  template:
+    metadata:
+      labels:
+        app: ai-ops-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /metrics
+        prometheus.io/port: "5005"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: ai-ops-service
+          image: ai-ops-service:pfe-local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 5005
+          env:
+            - name: APP_HOST
+              value: "0.0.0.0"
+            - name: APP_PORT
+              value: "5005"
+            - name: AIOPS_MODEL_PROVIDER
+              value: rules
+            - name: PROMETHEUS_URL
+              value: http://prometheus.monitoring.svc.cluster.local:9090
+            - name: AIOPS_WEBHOOK_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: traininghub-secrets
+                  key: AIOPS_WEBHOOK_TOKEN
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: temporary-files
+              mountPath: /tmp
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi
+      volumes:
+        - name: temporary-files
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-ops-service
+  namespace: traininghub
+  labels:
+    app: ai-ops-service
+spec:
+  selector:
+    app: ai-ops-service
+  ports:
+    - name: http
+      port: 5005
+      targetPort: http
+  type: ClusterIP

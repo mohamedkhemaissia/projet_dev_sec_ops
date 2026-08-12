@@ -114,6 +114,144 @@ services:
       MYSQL_USER: tms_user
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-tms_password}
       MYSQL_DATABASE: training_platform_db
+  # --- SERVICE DE PRESENTATION WEB ---
+  frontend-service:
+    build:
+      context: .
+      dockerfile: infra/docker/frontend-service.Dockerfile
+    image: frontend-service:latest
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    depends_on:
+      user-service:
+        condition: service_started
+      course-service:
+        condition: service_started
+      certificate-service:
+        condition: service_started
+    ports:
+      - "3000:3000"
+    environment:
+      APP_HOST: "0.0.0.0"
+      APP_PORT: "3000"
+      FRONTEND_SECRET_KEY: ${FRONTEND_SECRET_KEY:-traininghub-frontend-local-secret}
+      USER_SERVICE_URL: http://user-service:5001
+      COURSE_SERVICE_URL: http://course-service:5002
+      CERTIFICATE_SERVICE_URL: http://certificate-service:5004
+      SESSION_FILE_DIR: /tmp/traininghub-frontend-sessions
+      SESSION_COOKIE_SECURE: "false"
+
+  # --- ASSISTANT AIOPS EN LECTURE SEULE ---
+  ai-ops-service:
+    build:
+      context: .
+      dockerfile: infra/docker/ai-ops-service.Dockerfile
+    image: ai-ops-service:latest
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    ports:
+      - "5005:5005"
+    environment:
+      APP_HOST: "0.0.0.0"
+      APP_PORT: "5005"
+      AIOPS_WEBHOOK_TOKEN: ${AIOPS_WEBHOOK_TOKEN:-traininghub-aiops-local-token}
+      AIOPS_MODEL_PROVIDER: ${AIOPS_MODEL_PROVIDER:-rules}
+      PROMETHEUS_URL: http://prometheus:9090
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma3:1b}
+      AIOPS_MODEL_TIMEOUT_SECONDS: ${AIOPS_MODEL_TIMEOUT_SECONDS:-180}
+
+  # --- MODELE LOCAL OPTIONNEL : docker compose --profile ai up -d ollama ---
+  ollama:
+    profiles:
+      - ai
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    security_opt:
+      - no-new-privileges:true
+
+  # --- SHIFT RIGHT: METRIQUES, DASHBOARDS ET ALERTES ---
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    restart: unless-stopped
+    depends_on:
+      user-service:
+        condition: service_started
+      course-service:
+        condition: service_started
+      certificate-service:
+        condition: service_started
+      frontend-service:
+        condition: service_started
+      ai-ops-service:
+        condition: service_started
+      alertmanager:
+        condition: service_started
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    restart: unless-stopped
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./infra/monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    restart: unless-stopped
+    depends_on:
+      prometheus:
+        condition: service_started
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./infra/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
 # --- VOLUMES DE PERSISTANCE ---
 volumes:
   mysql_data:
+  prometheus_data:
+  alertmanager_data:
+  grafana_data:
+  ollama_data:

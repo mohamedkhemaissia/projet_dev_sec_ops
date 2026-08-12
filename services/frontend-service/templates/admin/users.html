@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import empty_state %}
+{% block title %}Utilisateurs — TrainingHub{% endblock %}
+{% block page_name %}Gestion des utilisateurs{% endblock %}
+{% block content %}
+<div class="page-heading">
+    <div><span class="eyebrow">Administration</span><h1>Utilisateurs</h1><p>Consultez les comptes et gérez leurs rôles.</p></div>
+    <span class="count-pill"><strong>{{ users|length }}</strong> comptes</span>
+</div>
+<form class="filter-bar compact-filter" method="get">
+    <div class="search-field"><i class="bi bi-search"></i><input name="q" value="{{ request.args.get('q', '') }}" placeholder="Rechercher par nom ou e-mail..."></div>
+    <button class="btn btn-dark" type="submit">Rechercher</button>
+    {% if request.args.get('q') %}<a class="btn btn-soft" href="{{ url_for('web.admin_users') }}"><i class="bi bi-x-lg"></i></a>{% endif %}
+</form>
+{% if users %}
+<div class="data-card">
+    <div class="table-responsive">
+        <table class="table modern-table align-middle">
+            <thead><tr><th>Utilisateur</th><th>Rôle</th><th>Identifiant</th><th class="text-end">Actions</th></tr></thead>
+            <tbody>
+            {% for user in users %}
+                <tr>
+                    <td><div class="user-cell"><span class="avatar">{{ user.name[:1]|upper }}</span><div><strong>{{ user.name }}</strong><small>{{ user.email }}</small></div></div></td>
+                    <td><span class="role-badge"><i class="bi bi-{{ 'shield-lock' if user.role == 'admin' else 'mortarboard' }}"></i> {{ "Administrateur" if user.role == "admin" else "Apprenant" }}</span></td>
+                    <td><span class="id-code">#{{ "%04d"|format(user.id) }}</span></td>
+                    <td>
+                        <div class="table-actions">
+                            <form method="post" action="{{ url_for('web.admin_update_user_role', user_id=user.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <select class="form-select form-select-sm" name="role" onchange="this.form.submit()" {{ 'disabled' if user.id == current_user.id }}>
+                                    <option value="learner" {{ 'selected' if user.role == 'learner' }}>Learner</option>
+                                    <option value="admin" {{ 'selected' if user.role == 'admin' }}>Admin</option>
+                                </select>
+                            </form>
+                            {% if user.id != current_user.id %}
+                            <form method="post" action="{{ url_for('web.admin_delete_user', user_id=user.id) }}" data-confirm="Supprimer définitivement le compte de {{ user.name }} ?">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="icon-button danger" type="submit" aria-label="Supprimer"><i class="bi bi-trash3"></i></button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}{{ empty_state('bi-people', 'Aucun utilisateur trouvé', 'Essayez une autre recherche.', url_for('web.admin_users'), 'Réinitialiser') }}{% endif %}
+{% endblock %}

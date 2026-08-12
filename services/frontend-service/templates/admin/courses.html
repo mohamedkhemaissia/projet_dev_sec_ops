@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import empty_state %}
+{% block title %}Gestion des formations — TrainingHub{% endblock %}
+{% block page_name %}Gestion des formations{% endblock %}
+{% block content %}
+<div class="page-heading">
+    <div><span class="eyebrow">Administration du catalogue</span><h1>Formations</h1><p>Créez, actualisez et pilotez les parcours proposés.</p></div>
+    <a class="btn btn-primary" href="{{ url_for('web.admin_create_course') }}"><i class="bi bi-plus-lg"></i> Nouvelle formation</a>
+</div>
+{% if courses %}
+<div class="admin-course-grid">
+    {% for course in courses %}
+    <article class="admin-course-card">
+        <div class="admin-course-accent cover-{{ ['violet', 'cyan', 'orange', 'green'][loop.index0 % 4] }}">
+            <i class="bi bi-{{ 'shield-lock' if 'devsecops' in course.category|lower else 'journal-code' }}"></i>
+        </div>
+        <div class="admin-course-body">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+                <div><span class="eyebrow">{{ course.category }}</span><h2>{{ course.title }}</h2></div>
+                <div class="dropdown">
+                    <button class="icon-button" data-bs-toggle="dropdown"><i class="bi bi-three-dots"></i></button>
+                    <div class="dropdown-menu dropdown-menu-end">
+                        <a class="dropdown-item" href="{{ url_for('web.admin_edit_course', course_id=course.id) }}"><i class="bi bi-pencil"></i> Modifier</a>
+                        <a class="dropdown-item" href="{{ url_for('web.admin_enrollments', course_id=course.id) }}"><i class="bi bi-people"></i> Inscriptions</a>
+                        <hr class="dropdown-divider">
+                        <form method="post" action="{{ url_for('web.admin_delete_course', course_id=course.id) }}" data-confirm="Supprimer la formation « {{ course.title }} » ?">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="dropdown-item text-danger" type="submit"><i class="bi bi-trash3"></i> Supprimer</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <p>{{ course.description|truncate(120) }}</p>
+            <div class="admin-course-meta">
+                <span><i class="bi bi-clock"></i> {{ course.duration|int }} h</span>
+                <span><i class="bi bi-bar-chart"></i> {{ course.level|status_label }}</span>
+            </div>
+            <div class="admin-course-actions">
+                <a class="btn btn-soft" href="{{ url_for('web.admin_edit_course', course_id=course.id) }}">Modifier</a>
+                <a class="btn btn-dark" href="{{ url_for('web.admin_enrollments', course_id=course.id) }}">Gérer les inscrits</a>
+            </div>
+        </div>
+    </article>
+    {% endfor %}
+</div>
+{% else %}{{ empty_state('bi-journal-plus', 'Le catalogue est vide', 'Créez la première formation de TrainingHub.', url_for('web.admin_create_course'), 'Créer une formation') }}{% endif %}
+{% endblock %}

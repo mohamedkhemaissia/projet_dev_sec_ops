@@ -196,8 +196,10 @@ def get_enrollments_by_course(course_id):
         cursor.execute(
             """
             SELECT e.id, e.user_id, e.course_id, e.status,
-                   e.enrolled_at, e.completed_at
+                   e.enrolled_at, e.completed_at,
+                   u.name AS learner_name, u.email AS learner_email
             FROM enrollments e
+            JOIN users u ON u.id = e.user_id
             WHERE e.course_id = %s
             ORDER BY e.enrolled_at DESC
             """,

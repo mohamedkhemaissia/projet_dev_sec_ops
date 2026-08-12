@@ -1,0 +1,51 @@
+{% macro status_badge(status) %}
+    <span class="status-badge status-{{ status }}">
+        <span class="status-dot"></span>{{ status|status_label }}
+    </span>
+{% endmacro %}
+
+{% macro course_card(course, enrollment=None) %}
+    {% set palettes = ['violet', 'cyan', 'orange', 'green'] %}
+    {% set palette = palettes[course.id % 4] %}
+    <article class="course-card">
+        <div class="course-cover cover-{{ palette }}">
+            <div class="course-orbit"></div>
+            <span class="course-category">{{ course.category }}</span>
+            <i class="bi {{ 'bi-shield-lock' if 'security' in course.category|lower or 'devsecops' in course.category|lower else 'bi-code-square' if 'dev' in course.category|lower else 'bi-mortarboard' }}"></i>
+        </div>
+        <div class="course-card-body">
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+                <span class="level-pill">{{ course.level|status_label }}</span>
+                <span class="course-duration"><i class="bi bi-clock"></i> {{ course.duration|int }} h</span>
+            </div>
+            <h3><a href="{{ url_for('web.course_detail', course_id=course.id) }}">{{ course.title }}</a></h3>
+            <p>{{ course.description|truncate(115) }}</p>
+            {% if enrollment %}
+                <div class="course-progress">
+                    <div class="d-flex justify-content-between">
+                        <span>{{ enrollment.status|status_label }}</span>
+                        <strong>{{ 100 if enrollment.status == 'completed' else 55 if enrollment.status == 'in_progress' else 10 }}%</strong>
+                    </div>
+                    <div class="progress-track">
+                        <span data-progress="{{ 100 if enrollment.status == 'completed' else 55 if enrollment.status == 'in_progress' else 10 }}"></span>
+                    </div>
+                </div>
+            {% else %}
+                <a class="card-link" href="{{ url_for('web.course_detail', course_id=course.id) }}">
+                    Découvrir la formation <i class="bi bi-arrow-up-right"></i>
+                </a>
+            {% endif %}
+        </div>
+    </article>
+{% endmacro %}
+
+{% macro empty_state(icon, title, text, href=None, label=None) %}
+    <div class="empty-state">
+        <span class="empty-icon"><i class="bi {{ icon }}"></i></span>
+        <h3>{{ title }}</h3>
+        <p>{{ text }}</p>
+        {% if href %}
+            <a class="btn btn-primary" href="{{ href }}">{{ label }}</a>
+        {% endif %}
+    </div>
+{% endmacro %}

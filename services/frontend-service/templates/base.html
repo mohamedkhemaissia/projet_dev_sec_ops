@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="fr" data-bs-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="TrainingHub — votre parcours de formation, de l'inscription à la certification.">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% block title %}TrainingHub{% endblock %}</title>
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.svg') }}" type="image/svg+xml">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/app.css') }}" rel="stylesheet">
+</head>
+<body class="{{ 'app-shell' if is_authenticated else 'public-shell' }}">
+    {% if is_authenticated %}
+        <aside class="sidebar" id="appSidebar">
+            <a class="brand brand-light" href="{{ url_for('web.dashboard') }}">
+                <span class="brand-mark"><i class="bi bi-layers-half"></i></span>
+                <span>Training<span>Hub</span></span>
+            </a>
+
+            <div class="sidebar-profile">
+                <div class="avatar">{{ current_user.name[:1]|upper }}</div>
+                <div class="min-w-0">
+                    <strong class="text-truncate d-block">{{ current_user.name }}</strong>
+                    <small>{{ "Administrateur" if current_user.role == "admin" else "Apprenant" }}</small>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav" aria-label="Navigation principale">
+                <span class="nav-section">Espace personnel</span>
+                <a href="{{ url_for('web.dashboard') }}"
+                   class="{{ 'active' if request.endpoint in ['web.dashboard', 'web.learner_dashboard', 'web.admin_dashboard'] }}">
+                    <i class="bi bi-grid-1x2-fill"></i><span>Vue d’ensemble</span>
+                </a>
+                <a href="{{ url_for('web.courses') }}"
+                   class="{{ 'active' if request.endpoint in ['web.courses', 'web.course_detail'] }}">
+                    <i class="bi bi-collection-play-fill"></i><span>Formations</span>
+                </a>
+
+                {% if current_user.role == "learner" %}
+                    <a href="{{ url_for('web.learner_enrollments') }}"
+                       class="{{ 'active' if request.endpoint == 'web.learner_enrollments' }}">
+                        <i class="bi bi-journal-check"></i><span>Mes inscriptions</span>
+                    </a>
+                    <a href="{{ url_for('web.learner_certificates') }}"
+                       class="{{ 'active' if request.endpoint == 'web.learner_certificates' }}">
+                        <i class="bi bi-patch-check-fill"></i><span>Mes certificats</span>
+                    </a>
+                {% else %}
+                    <span class="nav-section mt-3">Administration</span>
+                    <a href="{{ url_for('web.admin_users') }}"
+                       class="{{ 'active' if request.endpoint == 'web.admin_users' }}">
+                        <i class="bi bi-people-fill"></i><span>Utilisateurs</span>
+                    </a>
+                    <a href="{{ url_for('web.admin_courses') }}"
+                       class="{{ 'active' if request.endpoint and request.endpoint.startswith('web.admin_') and 'course' in request.endpoint }}">
+                        <i class="bi bi-kanban-fill"></i><span>Gestion des cours</span>
+                    </a>
+                {% endif %}
+            </nav>
+
+            <div class="sidebar-bottom">
+                <div class="security-note">
+                    <i class="bi bi-shield-check"></i>
+                    <div><strong>Session protégée</strong><small>Connexion sécurisée</small></div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="app-main">
+            <header class="topbar">
+                <button class="icon-button sidebar-toggle" type="button" aria-label="Ouvrir le menu">
+                    <i class="bi bi-list"></i>
+                </button>
+                <div class="topbar-title">
+                    <span class="eyebrow">TrainingHub</span>
+                    <strong>{% block page_name %}Espace de formation{% endblock %}</strong>
+                </div>
+                <div class="topbar-actions">
+                    <button class="icon-button theme-toggle" type="button" aria-label="Changer de thème">
+                        <i class="bi bi-moon-stars"></i>
+                    </button>
+                    <a class="profile-chip" href="{{ url_for('web.profile') }}">
+                        <span class="avatar avatar-sm">{{ current_user.name[:1]|upper }}</span>
+                        <span class="d-none d-md-block">{{ current_user.name }}</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </div>
+            </header>
+
+            <main class="app-content">
+                {% include "partials/flash.html" %}
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+        <div class="sidebar-backdrop"></div>
+    {% else %}
+        <header class="public-header">
+            <nav class="navbar navbar-expand-lg">
+                <div class="container">
+                    <a class="brand" href="{{ url_for('web.home') }}">
+                        <span class="brand-mark"><i class="bi bi-layers-half"></i></span>
+                        <span>Training<span>Hub</span></span>
+                    </a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#publicNav">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="publicNav">
+                        <div class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
+                            <a class="nav-link" href="{{ url_for('web.home') }}#experience">La plateforme</a>
+                            <a class="nav-link" href="{{ url_for('web.verify') }}">Vérifier un certificat</a>
+                            <button class="icon-button theme-toggle mx-lg-2" type="button" aria-label="Changer de thème">
+                                <i class="bi bi-moon-stars"></i>
+                            </button>
+                            <a class="btn btn-ghost" href="{{ url_for('web.login') }}">Se connecter</a>
+                            <a class="btn btn-primary" href="{{ url_for('web.register') }}">Créer un compte</a>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </header>
+        <main>
+            <div class="public-flash container">{% include "partials/flash.html" %}</div>
+            {% block public_content %}{% endblock %}
+        </main>
+    {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.6/dist/htmx.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js" defer></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+</body>
+</html>

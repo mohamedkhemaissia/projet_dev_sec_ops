@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import status_badge %}
+{% block title %}{{ course.title }} — TrainingHub{% endblock %}
+{% block page_name %}Détail de la formation{% endblock %}
+{% block content %}
+<a class="back-link mb-4 d-inline-flex" href="{{ url_for('web.courses') }}"><i class="bi bi-arrow-left"></i> Retour au catalogue</a>
+<section class="course-hero">
+    <div class="course-hero-copy">
+        <div class="d-flex align-items-center flex-wrap gap-2 mb-3">
+            <span class="course-category">{{ course.category }}</span>
+            <span class="level-pill level-light">{{ course.level|status_label }}</span>
+        </div>
+        <h1>{{ course.title }}</h1>
+        <p>{{ course.description }}</p>
+        <div class="course-meta">
+            <span><i class="bi bi-clock"></i><strong>{{ course.duration|int }} heures</strong><small>Durée estimée</small></span>
+            <span><i class="bi bi-bar-chart"></i><strong>{{ course.level|status_label }}</strong><small>Niveau</small></span>
+            <span><i class="bi bi-patch-check"></i><strong>Certifiante</strong><small>Validation finale</small></span>
+        </div>
+    </div>
+    <div class="course-hero-art">
+        <div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div>
+        <i class="bi {{ 'bi-shield-lock-fill' if 'devsecops' in course.category|lower or 'security' in course.category|lower else 'bi-code-square' }}"></i>
+    </div>
+</section>
+
+<div class="detail-layout">
+    <section class="panel course-description">
+        <span class="eyebrow">À propos du parcours</span>
+        <h2>Ce que vous allez développer</h2>
+        <p>{{ course.description }}</p>
+        <div class="learning-points">
+            <div><i class="bi bi-check2"></i><span>Une progression structurée adaptée au niveau {{ course.level|status_label|lower }}</span></div>
+            <div><i class="bi bi-check2"></i><span>Des compétences directement valorisables dans votre parcours</span></div>
+            <div><i class="bi bi-check2"></i><span>Un certificat TrainingHub après validation de la formation</span></div>
+        </div>
+    </section>
+    <aside class="panel enrollment-card">
+        {% if current_user.role == "learner" %}
+            {% if enrollment %}
+                {{ status_badge(enrollment.status) }}
+                <h2>Vous suivez cette formation</h2>
+                <p>Retrouvez-la dans votre espace et suivez son état d’avancement.</p>
+                <div class="course-progress my-4">
+                    <div class="d-flex justify-content-between"><span>Progression</span><strong>{{ 100 if enrollment.status == 'completed' else 55 if enrollment.status == 'in_progress' else 10 }}%</strong></div>
+                    <div class="progress-track"><span data-progress="{{ 100 if enrollment.status == 'completed' else 55 if enrollment.status == 'in_progress' else 10 }}"></span></div>
+                </div>
+                <a class="btn btn-primary w-100" href="{{ url_for('web.learner_enrollments') }}">Voir mon parcours</a>
+            {% else %}
+                <span class="enrollment-icon"><i class="bi bi-rocket-takeoff"></i></span>
+                <h2>Prêt à commencer ?</h2>
+                <p>Ajoutez cette formation à votre parcours en un clic.</p>
+                <form method="post" action="{{ url_for('web.enroll', course_id=course.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-primary btn-lg w-100" type="submit">S’inscrire maintenant <i class="bi bi-arrow-right"></i></button>
+                </form>
+                <small><i class="bi bi-shield-check"></i> Inscription immédiate et sécurisée</small>
+            {% endif %}
+        {% else %}
+            <span class="enrollment-icon"><i class="bi bi-sliders"></i></span>
+            <h2>Gérer cette formation</h2>
+            <p>Modifiez son contenu ou consultez les apprenants inscrits.</p>
+            <a class="btn btn-primary w-100 mb-2" href="{{ url_for('web.admin_edit_course', course_id=course.id) }}">Modifier</a>
+            <a class="btn btn-soft w-100" href="{{ url_for('web.admin_enrollments', course_id=course.id) }}">Voir les inscriptions</a>
+        {% endif %}
+    </aside>
+</div>
+{% endblock %}

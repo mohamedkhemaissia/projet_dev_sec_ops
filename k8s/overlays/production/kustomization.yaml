@@ -1,0 +1,33 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: traininghub
+
+# Keep this list explicit: secret.yaml contains local demonstration values and
+# must never be rendered by the production CD workflow.
+resources:
+  - ../../namespace.yaml
+  - ../../frontend.yaml
+  - ../../ai-ops-service.yaml
+  - ../../app-config.yaml
+  - ../../mysql.yaml
+  - ../../user-service.yaml
+  - ../../course-service.yaml
+  - ../../certificate-service.yaml
+  - ../../user-service-hpa.yaml
+  - ../../course-service-hpa.yaml
+  - ../../certificate-service-hpa.yaml
+  - ../../frontend-service-hpa.yaml
+  - ../../network-policies.yaml
+  - ../../ingress.yaml
+
+configMapGenerator:
+  - name: mysql-initdb
+    files:
+      - init.sql=../../init.sql
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+patches:
+  - path: frontend-security.yaml

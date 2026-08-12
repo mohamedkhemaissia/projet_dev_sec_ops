@@ -1,0 +1,251 @@
+name: CD Kubernetes
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    branches:
+      - main
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Immutable GHCR image tag to deploy (for example, a CI run number)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: traininghub-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Kubernetes
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    env:
+      KUBE_CONFIG_B64: ${{ secrets.KUBE_CONFIG_B64 }}
+      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+      APP_SECRET_KEY: ${{ secrets.APP_SECRET_KEY }}
+      JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+      DEFAULT_ADMIN_PASSWORD: ${{ secrets.DEFAULT_ADMIN_PASSWORD }}
+      AIOPS_WEBHOOK_TOKEN: ${{ secrets.AIOPS_WEBHOOK_TOKEN }}
+      IMAGE_TAG: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.run_number || inputs.image_tag }}
+
+    steps:
+      - name: Checkout the tested revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.36.1
+
+      - name: Validate deployment secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          required_secrets=(
+            KUBE_CONFIG_B64
+            GHCR_USERNAME
+            GHCR_TOKEN
+            APP_SECRET_KEY
+            JWT_SECRET_KEY
+            MYSQL_ROOT_PASSWORD
+            MYSQL_PASSWORD
+            DEFAULT_ADMIN_PASSWORD
+            AIOPS_WEBHOOK_TOKEN
+          )
+
+          for secret_name in "${required_secrets[@]}"; do
+            if [[ -z "${!secret_name:-}" ]]; then
+              echo "Missing required production secret: ${secret_name}" >&2
+              exit 1
+            fi
+          done
+
+      - name: Configure cluster access
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "${RUNNER_TEMP}/.kube"
+          printf '%s' "${KUBE_CONFIG_B64}" | base64 --decode > "${RUNNER_TEMP}/.kube/config"
+          chmod 600 "${RUNNER_TEMP}/.kube/config"
+          echo "KUBECONFIG=${RUNNER_TEMP}/.kube/config" >> "${GITHUB_ENV}"
+
+      - name: Check cluster connection
+        run: kubectl cluster-info
+
+      - name: Render immutable production manifests
+        id: images
+        shell: bash
+        run: |
+          set -euo pipefail
+          image_prefix="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}"
+          deployment_dir="${RUNNER_TEMP}/traininghub-k8s"
+          cp -R k8s "${deployment_dir}"
+
+          cat > "${deployment_dir}/overlays/production/cd-images.yaml" <<EOF
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: user-service
+            namespace: traininghub
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: user-service
+                    image: ${image_prefix}/user-service:${IMAGE_TAG}
+          ---
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: course-service
+            namespace: traininghub
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: course-service
+                    image: ${image_prefix}/course-service:${IMAGE_TAG}
+          ---
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: certificate-service
+            namespace: traininghub
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: certificate-service
+                    image: ${image_prefix}/certificate-service:${IMAGE_TAG}
+          ---
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: ai-ops-service
+            namespace: traininghub
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: ai-ops-service
+                    image: ${image_prefix}/ai-ops-service:${IMAGE_TAG}
+          ---
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: frontend-service
+            namespace: traininghub
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: frontend-service
+                    image: ${image_prefix}/frontend-service:${IMAGE_TAG}
+          EOF
+
+          printf '  - path: cd-images.yaml\n' >> "${deployment_dir}/overlays/production/kustomization.yaml"
+          kubectl kustomize "${deployment_dir}/overlays/production" \
+            --load-restrictor=LoadRestrictionsNone \
+            > "${RUNNER_TEMP}/traininghub-production.yaml"
+          kubectl apply --dry-run=client -f "${RUNNER_TEMP}/traininghub-production.yaml" > /dev/null
+          echo "deployment_dir=${deployment_dir}" >> "${GITHUB_OUTPUT}"
+          echo "Deploying ${image_prefix} images with tag ${IMAGE_TAG}"
+
+      - name: Create production secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl apply -f k8s/namespace.yaml
+
+          kubectl -n traininghub create secret generic traininghub-secrets \
+            --from-literal=SECRET_KEY="${APP_SECRET_KEY}" \
+            --from-literal=JWT_SECRET_KEY="${JWT_SECRET_KEY}" \
+            --from-literal=MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD}" \
+            --from-literal=MYSQL_PASSWORD="${MYSQL_PASSWORD}" \
+            --from-literal=DEFAULT_ADMIN_PASSWORD="${DEFAULT_ADMIN_PASSWORD}" \
+            --from-literal=AIOPS_WEBHOOK_TOKEN="${AIOPS_WEBHOOK_TOKEN}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl -n traininghub create secret docker-registry ghcr-pull-secret \
+            --docker-server=ghcr.io \
+            --docker-username="${GHCR_USERNAME}" \
+            --docker-password="${GHCR_TOKEN}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl -n traininghub patch serviceaccount default --type=merge \
+            -p '{"imagePullSecrets":[{"name":"ghcr-pull-secret"}]}'
+
+      - name: Deploy and verify rollouts
+        id: deploy
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          deployments=(user-service course-service certificate-service frontend-service ai-ops-service)
+
+          rollback() {
+            echo "Deployment failed; rolling application deployments back." >&2
+            for deployment in "${deployments[@]}"; do
+              kubectl -n traininghub rollout undo "deployment/${deployment}" || true
+            done
+            for deployment in "${deployments[@]}"; do
+              kubectl -n traininghub rollout status "deployment/${deployment}" --timeout=180s || true
+            done
+          }
+          trap rollback ERR
+
+          kubectl apply -f "${RUNNER_TEMP}/traininghub-production.yaml"
+          for deployment in "${deployments[@]}"; do
+            kubectl -n traininghub annotate "deployment/${deployment}" \
+              kubernetes.io/change-cause="GitHub Actions ${GITHUB_WORKFLOW} run ${GITHUB_RUN_NUMBER}, image tag ${IMAGE_TAG}" \
+              --overwrite
+            kubectl -n traininghub rollout status "deployment/${deployment}" --timeout=300s
+          done
+
+          trap - ERR
+
+      - name: Run Kubernetes smoke tests
+        id: smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl get --raw "/api/v1/namespaces/traininghub/services/http:user-service:5001/proxy/api/v1/users/health" > /dev/null
+          kubectl get --raw "/api/v1/namespaces/traininghub/services/http:course-service:5002/proxy/api/v1/courses/health" > /dev/null
+          kubectl get --raw "/api/v1/namespaces/traininghub/services/http:certificate-service:5004/proxy/api/v1/certificates/health" > /dev/null
+          kubectl get --raw "/api/v1/namespaces/traininghub/services/http:frontend-service:3000/proxy/health" > /dev/null
+          kubectl get --raw "/api/v1/namespaces/traininghub/services/http:ai-ops-service:5005/proxy/api/v1/health" > /dev/null
+          kubectl -n traininghub get deployments,pods,services
+
+      - name: Roll back after failed smoke tests
+        if: failure() && steps.deploy.outcome == 'success' && steps.smoke.outcome == 'failure'
+        shell: bash
+        run: |
+          set -u
+          for deployment in user-service course-service certificate-service frontend-service ai-ops-service; do
+            kubectl -n traininghub rollout undo "deployment/${deployment}" || true
+          done
+          for deployment in user-service course-service certificate-service frontend-service ai-ops-service; do
+            kubectl -n traininghub rollout status "deployment/${deployment}" --timeout=180s || true
+          done
+
+      - name: Remove temporary kubeconfig
+        if: always()
+        shell: bash
+        run: rm -f "${RUNNER_TEMP}/.kube/config"

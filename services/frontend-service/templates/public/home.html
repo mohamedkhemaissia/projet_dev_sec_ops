@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}TrainingHub — Apprendre. Progresser. Certifier.{% endblock %}
+{% block public_content %}
+<section class="hero">
+    <div class="hero-grid"></div>
+    <div class="container position-relative">
+        <div class="row align-items-center gy-5">
+            <div class="col-lg-6">
+                <div class="hero-copy">
+                    <span class="hero-kicker"><i class="bi bi-stars"></i> Plateforme d’apprentissage nouvelle génération</span>
+                    <h1>Transformez vos compétences en <span>réussites certifiées.</span></h1>
+                    <p>Un parcours fluide pour découvrir des formations, suivre votre progression et valoriser chaque compétence avec un certificat vérifiable.</p>
+                    <div class="hero-actions">
+                        <a class="btn btn-primary btn-lg" href="{{ url_for('web.register') }}">
+                            Commencer gratuitement <i class="bi bi-arrow-right"></i>
+                        </a>
+                        <a class="btn btn-soft btn-lg" href="{{ url_for('web.verify') }}">
+                            <i class="bi bi-patch-check"></i> Vérifier un certificat
+                        </a>
+                    </div>
+                    <div class="trust-row">
+                        <span><i class="bi bi-shield-check"></i> Accès sécurisé</span>
+                        <span><i class="bi bi-check2-circle"></i> Parcours certifiants</span>
+                        <span><i class="bi bi-phone"></i> 100% responsive</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="hero-visual">
+                    <div class="glow glow-one"></div>
+                    <div class="glow glow-two"></div>
+                    <div class="dashboard-preview">
+                        <div class="preview-top">
+                            <div class="preview-dots"><span></span><span></span><span></span></div>
+                            <span class="preview-label">Mon espace</span>
+                            <span class="preview-avatar">M</span>
+                        </div>
+                        <div class="preview-body">
+                            <div class="preview-welcome">
+                                <span>Bonjour Mohamed 👋</span>
+                                <strong>Continuez à progresser</strong>
+                            </div>
+                            <div class="preview-stats">
+                                <div><i class="bi bi-play-circle"></i><strong>03</strong><span>En cours</span></div>
+                                <div><i class="bi bi-trophy"></i><strong>08</strong><span>Terminées</span></div>
+                                <div><i class="bi bi-patch-check"></i><strong>06</strong><span>Certificats</span></div>
+                            </div>
+                            <div class="preview-course">
+                                <div class="preview-course-icon"><i class="bi bi-shield-lock"></i></div>
+                                <div>
+                                    <span>Formation en cours</span>
+                                    <strong>DevSecOps Fundamentals</strong>
+                                    <div class="preview-progress"><span></span></div>
+                                </div>
+                                <b>72%</b>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="floating-card floating-card-one">
+                        <span class="floating-icon green"><i class="bi bi-check2"></i></span>
+                        <div><small>Progression mise à jour</small><strong>Module terminé</strong></div>
+                    </div>
+                    <div class="floating-card floating-card-two">
+                        <span class="floating-icon violet"><i class="bi bi-award"></i></span>
+                        <div><small>Nouveau certificat</small><strong>Prêt à télécharger</strong></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="experience-section" id="experience">
+    <div class="container">
+        <div class="section-heading text-center">
+            <span class="eyebrow">Une expérience complète</span>
+            <h2>De la découverte à la certification</h2>
+            <p>TrainingHub rassemble toutes les étapes de votre apprentissage dans un espace clair, moderne et sécurisé.</p>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <article class="feature-card feature-violet">
+                    <span class="feature-number">01</span>
+                    <div class="feature-icon"><i class="bi bi-compass"></i></div>
+                    <h3>Explorez</h3>
+                    <p>Trouvez rapidement la formation adaptée à votre niveau et à vos objectifs.</p>
+                    <span class="feature-line"></span>
+                </article>
+            </div>
+            <div class="col-md-4">
+                <article class="feature-card feature-cyan">
+                    <span class="feature-number">02</span>
+                    <div class="feature-icon"><i class="bi bi-graph-up-arrow"></i></div>
+                    <h3>Progressez</h3>
+                    <p>Visualisez vos inscriptions et suivez chaque étape de votre parcours.</p>
+                    <span class="feature-line"></span>
+                </article>
+            </div>
+            <div class="col-md-4">
+                <article class="feature-card feature-orange">
+                    <span class="feature-number">03</span>
+                    <div class="feature-icon"><i class="bi bi-patch-check"></i></div>
+                    <h3>Certifiez</h3>
+                    <p>Obtenez un certificat PDF unique et vérifiable publiquement.</p>
+                    <span class="feature-line"></span>
+                </article>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="cta-section">
+    <div class="container">
+        <div class="cta-card">
+            <div class="cta-pattern"></div>
+            <div class="position-relative">
+                <span class="eyebrow text-white-50">Votre prochain objectif commence ici</span>
+                <h2>Prêt à construire votre parcours ?</h2>
+                <p>Créez votre espace et accédez aux formations TrainingHub.</p>
+            </div>
+            <a class="btn btn-light btn-lg position-relative" href="{{ url_for('web.register') }}">
+                Rejoindre TrainingHub <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+</section>
+
+<footer class="public-footer">
+    <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+        <a class="brand" href="{{ url_for('web.home') }}">
+            <span class="brand-mark"><i class="bi bi-layers-half"></i></span>
+            <span>Training<span>Hub</span></span>
+        </a>
+        <p>Développé par Mohamed Khemaissia · © 2026</p>
+        <a href="{{ url_for('web.verify') }}">Vérifier un certificat</a>
+    </div>
+</footer>
+{% endblock %}

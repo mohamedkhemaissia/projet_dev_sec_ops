@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import status_badge, empty_state %}
+{% block title %}Mes inscriptions — TrainingHub{% endblock %}
+{% block page_name %}Mes inscriptions{% endblock %}
+{% block content %}
+<div class="page-heading">
+    <div><span class="eyebrow">Mon parcours</span><h1>Mes formations</h1><p>Suivez l’état de vos inscriptions et retrouvez vos prochaines actions.</p></div>
+    <a class="btn btn-primary" href="{{ url_for('web.courses') }}"><i class="bi bi-plus-lg"></i> Explorer le catalogue</a>
+</div>
+{% if enrollments %}
+<div class="enrollment-list">
+    {% for item in enrollments %}
+    <article class="enrollment-row">
+        <div class="enrollment-row-icon cover-{{ ['violet', 'cyan', 'orange', 'green'][loop.index0 % 4] }}"><i class="bi bi-journal-bookmark"></i></div>
+        <div class="enrollment-main">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-1"><span class="eyebrow">{{ item.category }}</span>{{ status_badge(item.status) }}</div>
+            <h2><a href="{{ url_for('web.course_detail', course_id=item.course_id) }}">{{ item.title }}</a></h2>
+            <div class="progress-track"><span data-progress="{{ 100 if item.status == 'completed' else 55 if item.status == 'in_progress' else 10 }}"></span></div>
+        </div>
+        <div class="enrollment-meta"><span>Durée</span><strong>{{ item.duration|int }} h</strong></div>
+        <div class="enrollment-actions">
+            {% if item.status == "completed" %}
+                <form method="post" action="{{ url_for('web.issue_certificate', course_id=item.course_id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-primary" type="submit"><i class="bi bi-award"></i> Obtenir le certificat</button>
+                </form>
+            {% else %}
+                <a class="btn btn-soft" href="{{ url_for('web.course_detail', course_id=item.course_id) }}">Voir le détail</a>
+            {% endif %}
+            {% if item.status == "enrolled" %}
+                <form method="post" action="{{ url_for('web.unenroll', course_id=item.course_id) }}" data-confirm="Annuler cette inscription ?">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="icon-button danger" type="submit" aria-label="Annuler"><i class="bi bi-trash3"></i></button>
+                </form>
+            {% endif %}
+        </div>
+    </article>
+    {% endfor %}
+</div>
+{% else %}
+    {{ empty_state('bi-journal-plus', 'Aucune inscription', 'Votre parcours est encore vide. Explorez les formations disponibles.', url_for('web.courses'), 'Voir le catalogue') }}
+{% endif %}
+{% endblock %}
