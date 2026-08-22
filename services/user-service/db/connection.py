@@ -41,6 +41,7 @@ def row_to_user(row):
 
 def ensure_default_admin():
     admin = get_user_by_email(DEFAULT_ADMIN_EMAIL)
+
     if admin:
         update_user(
             admin["id"],
@@ -49,12 +50,26 @@ def ensure_default_admin():
         )
         return
 
-    create_user(
-        "TrainingHub Admin",
-        DEFAULT_ADMIN_EMAIL,
-        generate_password_hash(DEFAULT_ADMIN_PASSWORD),
-        "admin",
-    )
+    try:
+        create_user(
+            "TrainingHub Admin",
+            DEFAULT_ADMIN_EMAIL,
+            generate_password_hash(DEFAULT_ADMIN_PASSWORD),
+            "admin",
+        )
+    except mysql.connector.IntegrityError as error:
+        if error.errno != 1062:
+            raise
+
+        admin = get_user_by_email(DEFAULT_ADMIN_EMAIL)
+        if not admin:
+            raise
+
+        update_user(
+            admin["id"],
+            password_hash=generate_password_hash(DEFAULT_ADMIN_PASSWORD),
+            role="admin",
+        )
 
 
 def get_all_users():
