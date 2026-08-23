@@ -25,6 +25,29 @@ spec:
         runAsGroup: 10001
         seccompProfile:
           type: RuntimeDefault
+
+      initContainers:
+        - name: wait-for-mysql
+          image: mysql:8.0
+          command:
+            - sh
+            - -c
+            - |
+              until mysqladmin ping -h "$MYSQL_HOST" -P "$MYSQL_PORT" -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" --silent; do
+                echo "Waiting for MySQL..."
+                sleep 2
+              done
+          envFrom:
+            - configMapRef:
+                name: traininghub-config
+            - secretRef:
+                name: traininghub-secrets
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+
       containers:
         - name: certificate-service
           image: certificate-service:pfe-local
