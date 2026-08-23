@@ -38,6 +38,8 @@ spec:
               value: "0.0.0.0"
             - name: APP_PORT
               value: "3000"
+            - name: WTF_CSRF_SSL_STRICT
+              value: "false"
             - name: USER_SERVICE_URL
               value: "http://user-service:5001"
             - name: COURSE_SERVICE_URL

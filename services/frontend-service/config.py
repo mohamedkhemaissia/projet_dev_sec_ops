@@ -5,6 +5,7 @@ from pathlib import Path
 
 
 class Config:
+    WTF_CSRF_SSL_STRICT = os.getenv("WTF_CSRF_SSL_STRICT", "true").lower() == "true"
     DEBUG = os.getenv("FLASK_DEBUG", "false").lower() == "true"
     HOST = os.getenv("APP_HOST", "127.0.0.1")
     PORT = int(os.getenv("APP_PORT", "3000"))
