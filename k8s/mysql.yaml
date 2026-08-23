@@ -9,6 +9,7 @@ spec:
   resources:
     requests:
       storage: 1Gi
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -19,48 +20,74 @@ metadata:
     app: mysql
 spec:
   replicas: 1
+
+  strategy:
+    type: Recreate
+
   selector:
     matchLabels:
       app: mysql
+
   template:
     metadata:
       labels:
         app: mysql
+
     spec:
       containers:
         - name: mysql
           image: mysql:8.0
+
           args:
             - --default-authentication-plugin=mysql_native_password
+            - --innodb-buffer-pool-size=128M
+            - --max-connections=50
+            - --table-open-cache=400
+
           ports:
             - containerPort: 3306
+
           env:
             - name: MYSQL_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: traininghub-secrets
                   key: MYSQL_ROOT_PASSWORD
+
             - name: MYSQL_DATABASE
               valueFrom:
                 configMapKeyRef:
                   name: traininghub-config
                   key: MYSQL_DATABASE
+
             - name: MYSQL_USER
               valueFrom:
                 configMapKeyRef:
                   name: traininghub-config
                   key: MYSQL_USER
+
             - name: MYSQL_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: traininghub-secrets
                   key: MYSQL_PASSWORD
+
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "768Mi"
+              cpu: "500m"
+
           volumeMounts:
             - name: mysql-data
               mountPath: /var/lib/mysql
+
             - name: mysql-initdb
               mountPath: /docker-entrypoint-initdb.d
               readOnly: true
+
           readinessProbe:
             exec:
               command:
@@ -71,6 +98,7 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 12
+
           livenessProbe:
             exec:
               command:
@@ -81,13 +109,16 @@ spec:
             periodSeconds: 20
             timeoutSeconds: 5
             failureThreshold: 6
+
       volumes:
         - name: mysql-data
           persistentVolumeClaim:
             claimName: mysql-data
+
         - name: mysql-initdb
           configMap:
             name: mysql-initdb
+
 ---
 apiVersion: v1
 kind: Service
