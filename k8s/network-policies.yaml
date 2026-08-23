@@ -115,6 +115,7 @@ spec:
           - user-service
           - course-service
           - certificate-service
+          - ai-ops-service
   policyTypes:
     - Ingress
   ingress:
@@ -131,3 +132,5 @@ spec:
           port: 5002
         - protocol: TCP
           port: 5004
+        - protocol: TCP
+          port: 5005
