@@ -16,6 +16,11 @@ permissions:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    env:
+      SECRET_KEY: test-only-key
+      JWT_SECRET_KEY: test-only-jwt-key
+      MYSQL_PASSWORD: test-only-password
+      DEFAULT_ADMIN_PASSWORD: test-only-admin-password
 
     steps:
       - name: Checkout
