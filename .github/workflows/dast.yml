@@ -7,15 +7,6 @@ on:
         description: URL of the deployed staging environment to scan
         required: true
         type: string
-  workflow_run:
-    workflows:
-      - CD Kubernetes
-    branches:
-      - main
-    types:
-      - completed
-  schedule:
-    - cron: "0 2 * * 1"
 
 permissions:
   contents: read
@@ -23,11 +14,6 @@ permissions:
 jobs:
   zap-baseline:
     name: OWASP ZAP passive baseline
-    if: >-
-      (github.event_name == 'workflow_dispatch') ||
-      (vars.DAST_TARGET_URL != '' &&
-      (github.event_name == 'schedule' ||
-      github.event.workflow_run.conclusion == 'success'))
     runs-on: ubuntu-latest
     env:
       TARGET_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.target_url || vars.DAST_TARGET_URL }}
