@@ -7,7 +7,6 @@ resources:
   - frontend.yaml
   - ai-ops-service.yaml
   - namespace.yaml
-  - secret.yaml
   - app-config.yaml
   - mysql.yaml
   - user-service.yaml

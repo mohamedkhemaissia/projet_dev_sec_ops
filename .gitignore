@@ -13,3 +13,6 @@ instance/
 mysql_data/
 .env
 /certificat-demo.pdf
+/k8s/secret.yaml
+/k8s/monitoring/aiops-secret.yaml
+/infra/monitoring/alertmanager/aiops-token

@@ -344,7 +344,7 @@
     {"key": "learner_email", "value": "", "type": "string"},
     {"key": "learner_password", "value": "LearnerDemo123!", "type": "string"},
     {"key": "admin_email", "value": "admin@training.com", "type": "string"},
-    {"key": "admin_password", "value": "Admin123!", "type": "string"},
+    {"key": "admin_password", "value": "CHANGE_ME", "type": "string"},
     {"key": "learner_token", "value": "", "type": "string"},
     {"key": "admin_token", "value": "", "type": "string"},
     {"key": "learner_id", "value": "", "type": "string"},

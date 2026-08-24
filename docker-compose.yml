@@ -8,17 +8,17 @@ services:
     restart: unless-stopped
     command: --default-authentication-plugin=mysql_native_password
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
       MYSQL_DATABASE: training_platform_db
       MYSQL_USER: tms_user
-      MYSQL_PASSWORD: tms_password
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
     ports:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./infra/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpassword"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p\"$${MYSQL_ROOT_PASSWORD}\""]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -51,10 +51,10 @@ services:
       MYSQL_HOST: mysql
       MYSQL_PORT: "3306"
       MYSQL_USER: tms_user
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-tms_password}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
       MYSQL_DATABASE: training_platform_db
       DEFAULT_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-admin@training.com}
-      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-Admin123!}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:?DEFAULT_ADMIN_PASSWORD is required}
   # --- MICROSERVICE GESTION DES COURS (COURSE SERVICE) ---
   course-service:
     build:
@@ -82,7 +82,7 @@ services:
       MYSQL_HOST: mysql
       MYSQL_PORT: "3306"
       MYSQL_USER: tms_user
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-tms_password}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
       MYSQL_DATABASE: training_platform_db
 
   # --- MICROSERVICE CERTIFICATS ---
@@ -112,7 +112,7 @@ services:
       MYSQL_HOST: mysql
       MYSQL_PORT: "3306"
       MYSQL_USER: tms_user
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-tms_password}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
       MYSQL_DATABASE: training_platform_db
   # --- SERVICE DE PRESENTATION WEB ---
   frontend-service:
@@ -166,7 +166,7 @@ services:
     environment:
       APP_HOST: "0.0.0.0"
       APP_PORT: "5005"
-      AIOPS_WEBHOOK_TOKEN: ${AIOPS_WEBHOOK_TOKEN:-traininghub-aiops-local-token}
+      AIOPS_WEBHOOK_TOKEN: ${AIOPS_WEBHOOK_TOKEN:?AIOPS_WEBHOOK_TOKEN is required}
       AIOPS_MODEL_PROVIDER: ${AIOPS_MODEL_PROVIDER:-rules}
       PROMETHEUS_URL: http://prometheus:9090
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
@@ -219,6 +219,7 @@ services:
       - "9093:9093"
     volumes:
       - ./infra/monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./infra/monitoring/alertmanager/aiops-token:/etc/alertmanager-secrets/aiops-token:ro
       - alertmanager_data:/alertmanager
     security_opt:
       - no-new-privileges:true

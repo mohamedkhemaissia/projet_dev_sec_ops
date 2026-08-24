@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
     [string]$BaseUrl = "http://localhost:5005",
-    [string]$WebhookToken = "traininghub-aiops-local-token",
+    [string]$WebhookToken = $env:AIOPS_WEBHOOK_TOKEN,
     [ValidateSet(
         "TrainingHubServiceDown",
         "TrainingHubHighErrorRate",

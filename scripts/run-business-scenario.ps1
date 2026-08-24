@@ -4,7 +4,7 @@ param(
     [string]$CertificateBaseUrl = "http://localhost:5004",
     [string]$FrontendBaseUrl = "http://localhost:3000",
     [string]$AdminEmail = "admin@training.com",
-    [string]$AdminPassword = "Admin123!"
+    [string]$AdminPassword = $env:DEFAULT_ADMIN_PASSWORD
 )
 
 $ErrorActionPreference = "Stop"

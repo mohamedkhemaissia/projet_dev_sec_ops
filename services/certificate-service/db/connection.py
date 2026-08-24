@@ -8,7 +8,7 @@ from mysql.connector import Error, IntegrityError
 MYSQL_HOST = os.getenv("MYSQL_HOST", "mysql")
 MYSQL_PORT = int(os.getenv("MYSQL_PORT", "3306"))
 MYSQL_USER = os.getenv("MYSQL_USER", "tms_user")
-MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "tms_password")
+MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD")
 MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "training_platform_db")
 
 

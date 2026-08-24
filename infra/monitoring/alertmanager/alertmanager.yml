@@ -18,4 +18,4 @@ receivers:
         http_config:
           authorization:
             type: Bearer
-            credentials: traininghub-aiops-local-token
+            credentials_file: /etc/alertmanager-secrets/aiops-token

@@ -157,7 +157,7 @@ Compte admin cree automatiquement au demarrage:
 
 ```txt
 email: admin@training.com
-password: Admin123!
+password: <DEFAULT_ADMIN_PASSWORD>
 ```
 
 Ou les valeurs definies dans `.env`.
