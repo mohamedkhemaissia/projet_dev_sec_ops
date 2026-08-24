@@ -1,0 +1,19 @@
+NAMESPACE            NAME                                                READY   STATUS    RESTARTS       AGE    IP            NODE                        NOMINATED NODE   READINESS GATES
+kube-system          coredns-589f44dc88-8rbhp                            1/1     Running   1 (129m ago)   10h    10.244.0.4    traininghub-control-plane   <none>           <none>
+kube-system          coredns-589f44dc88-wfwzq                            1/1     Running   1 (129m ago)   10h    10.244.0.13   traininghub-control-plane   <none>           <none>
+kube-system          etcd-traininghub-control-plane                      1/1     Running   1 (129m ago)   10h    172.18.0.2    traininghub-control-plane   <none>           <none>
+kube-system          kindnet-n6mv6                                       1/1     Running   1 (129m ago)   10h    172.18.0.2    traininghub-control-plane   <none>           <none>
+kube-system          kube-apiserver-traininghub-control-plane            1/1     Running   1 (129m ago)   10h    172.18.0.2    traininghub-control-plane   <none>           <none>
+kube-system          kube-controller-manager-traininghub-control-plane   1/1     Running   2 (129m ago)   10h    172.18.0.2    traininghub-control-plane   <none>           <none>
+kube-system          kube-proxy-zt7pq                                    1/1     Running   1 (129m ago)   10h    172.18.0.2    traininghub-control-plane   <none>           <none>
+kube-system          kube-scheduler-traininghub-control-plane            1/1     Running   2 (129m ago)   10h    172.18.0.2    traininghub-control-plane   <none>           <none>
+local-path-storage   local-path-provisioner-855c7b7774-2c46g             1/1     Running   1 (129m ago)   10h    10.244.0.7    traininghub-control-plane   <none>           <none>
+monitoring           alertmanager-597b87c7c8-fkm8v                       1/1     Running   0              100m   10.244.0.19   traininghub-control-plane   <none>           <none>
+monitoring           grafana-74fb468cf6-x4bpb                            1/1     Running   1 (129m ago)   10h    10.244.0.5    traininghub-control-plane   <none>           <none>
+monitoring           prometheus-6767895db8-ksf27                         1/1     Running   1 (129m ago)   9h     10.244.0.12   traininghub-control-plane   <none>           <none>
+traininghub          ai-ops-service-77fd595574-4hd88                     1/1     Running   0              101m   10.244.0.17   traininghub-control-plane   <none>           <none>
+traininghub          certificate-service-b5476d8fc-q8lcz                 1/1     Running   0              72m    10.244.0.23   traininghub-control-plane   <none>           <none>
+traininghub          course-service-5d94b87dcc-rv8sg                     1/1     Running   0              72m    10.244.0.22   traininghub-control-plane   <none>           <none>
+traininghub          frontend-service-5498d5ccb-pr4qt                    1/1     Running   0              101m   10.244.0.18   traininghub-control-plane   <none>           <none>
+traininghub          mysql-64bf7b6fdb-z2wtt                              1/1     Running   0              67m    10.244.0.24   traininghub-control-plane   <none>           <none>
+traininghub          user-service-666b645c85-tfcth                       1/1     Running   0              72m    10.244.0.21   traininghub-control-plane   <none>           <none>

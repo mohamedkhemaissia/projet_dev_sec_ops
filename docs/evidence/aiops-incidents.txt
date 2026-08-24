@@ -1,0 +1,4 @@
+=== AIOPS INCIDENTS ===
+Count: 2
+TrainingHubAIOpsPipelineTest | status = resolved | service = unknown | severity = warning | created = 2026-08-24T09:20:50.972011+00:00
+TrainingHubAIOpsPipelineTest | status = firing | service = unknown | severity = warning | created = 2026-08-24T09:15:50.969750+00:00

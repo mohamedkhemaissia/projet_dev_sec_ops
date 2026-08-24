@@ -1,0 +1,123 @@
+]633;E;echo "=== NETWORK POLICIES ===";994cf873-d6fb-4b91-8797-4050fa39690a]633;C=== NETWORK POLICIES ===
+NAMESPACE     NAME                        POD-SELECTOR                                                                               AGE
+monitoring    allow-monitoring-internal   app in (alertmanager,grafana,prometheus)                                                   10h
+monitoring    default-deny-ingress        <none>                                                                                     10h
+traininghub   allow-frontend-to-apis      app in (ai-ops-service,certificate-service,course-service,user-service)                    10h
+traininghub   allow-ingress-controller    app in (ai-ops-service,certificate-service,course-service,frontend-service,user-service)   10h
+traininghub   allow-monitoring-scrapes    app in (ai-ops-service,certificate-service,course-service,frontend-service,user-service)   10h
+traininghub   allow-services-to-mysql     app=mysql                                                                                  10h
+traininghub   default-deny-ingress        <none>                                                                                     10h
+
+=== TRAININGHUB POLICIES ===
+Name:         allow-frontend-to-apis
+Namespace:    traininghub
+Created on:   2026-08-23 22:53:51 +0000 UTC
+Labels:       <none>
+Annotations:  <none>
+Spec:
+  PodSelector:     app in (ai-ops-service,certificate-service,course-service,user-service)
+  Allowing ingress traffic:
+    To Port: 5001/TCP
+    To Port: 5002/TCP
+    To Port: 5004/TCP
+    To Port: 5005/TCP
+    From:
+      PodSelector: app=frontend-service
+  Not affecting egress traffic
+  Policy Types: Ingress
+
+
+Name:         allow-ingress-controller
+Namespace:    traininghub
+Created on:   2026-08-23 22:53:51 +0000 UTC
+Labels:       <none>
+Annotations:  <none>
+Spec:
+  PodSelector:     app in (ai-ops-service,certificate-service,course-service,frontend-service,user-service)
+  Allowing ingress traffic:
+    To Port: 3000/TCP
+    To Port: 5001/TCP
+    To Port: 5002/TCP
+    To Port: 5004/TCP
+    To Port: 5005/TCP
+    From:
+      NamespaceSelector: kubernetes.io/metadata.name=ingress-nginx
+  Not affecting egress traffic
+  Policy Types: Ingress
+
+
+Name:         allow-monitoring-scrapes
+Namespace:    traininghub
+Created on:   2026-08-23 22:53:51 +0000 UTC
+Labels:       <none>
+Annotations:  <none>
+Spec:
+  PodSelector:     app in (ai-ops-service,certificate-service,course-service,frontend-service,user-service)
+  Allowing ingress traffic:
+    To Port: 3000/TCP
+    To Port: 5001/TCP
+    To Port: 5002/TCP
+    To Port: 5004/TCP
+    To Port: 5005/TCP
+    From:
+      NamespaceSelector: kubernetes.io/metadata.name=monitoring
+  Not affecting egress traffic
+  Policy Types: Ingress
+
+
+Name:         allow-services-to-mysql
+Namespace:    traininghub
+Created on:   2026-08-23 22:53:51 +0000 UTC
+Labels:       <none>
+Annotations:  <none>
+Spec:
+  PodSelector:     app=mysql
+  Allowing ingress traffic:
+    To Port: 3306/TCP
+    From:
+      PodSelector: app in (certificate-service,course-service,user-service)
+  Not affecting egress traffic
+  Policy Types: Ingress
+
+
+Name:         default-deny-ingress
+Namespace:    traininghub
+Created on:   2026-08-23 22:53:51 +0000 UTC
+Labels:       <none>
+Annotations:  <none>
+Spec:
+  PodSelector:     <none> (Allowing the specific traffic to all pods in this namespace)
+  Allowing ingress traffic:
+    <none> (Selected pods are isolated for ingress connectivity)
+  Not affecting egress traffic
+  Policy Types: Ingress
+
+=== MONITORING POLICIES ===
+Name:         allow-monitoring-internal
+Namespace:    monitoring
+Created on:   2026-08-23 23:23:56 +0000 UTC
+Labels:       <none>
+Annotations:  <none>
+Spec:
+  PodSelector:     app in (alertmanager,grafana,prometheus)
+  Allowing ingress traffic:
+    To Port: 3000/TCP
+    To Port: 9090/TCP
+    To Port: 9093/TCP
+    From:
+      NamespaceSelector: kubernetes.io/metadata.name=monitoring
+  Not affecting egress traffic
+  Policy Types: Ingress
+
+
+Name:         default-deny-ingress
+Namespace:    monitoring
+Created on:   2026-08-23 23:23:56 +0000 UTC
+Labels:       <none>
+Annotations:  <none>
+Spec:
+  PodSelector:     <none> (Allowing the specific traffic to all pods in this namespace)
+  Allowing ingress traffic:
+    <none> (Selected pods are isolated for ingress connectivity)
+  Not affecting egress traffic
+  Policy Types: Ingress

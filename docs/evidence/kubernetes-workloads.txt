@@ -1,0 +1,27 @@
+]633;E;echo "=== DEPLOYMENTS ===";994cf873-d6fb-4b91-8797-4050fa39690a]633;C=== DEPLOYMENTS ===
+NAMESPACE            NAME                     READY   UP-TO-DATE   AVAILABLE   AGE
+kube-system          coredns                  2/2     2            2           10h
+local-path-storage   local-path-provisioner   1/1     1            1           10h
+monitoring           alertmanager             1/1     1            1           10h
+monitoring           grafana                  1/1     1            1           10h
+monitoring           prometheus               1/1     1            1           10h
+traininghub          ai-ops-service           1/1     1            1           10h
+traininghub          certificate-service      1/1     1            1           10h
+traininghub          course-service           1/1     1            1           10h
+traininghub          frontend-service         1/1     1            1           10h
+traininghub          mysql                    1/1     1            1           10h
+traininghub          user-service             1/1     1            1           10h
+
+=== SERVICES ===
+NAMESPACE     NAME                  TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                  AGE
+default       kubernetes            ClusterIP   10.96.0.1       <none>        443/TCP                  10h
+kube-system   kube-dns              ClusterIP   10.96.0.10      <none>        53/UDP,53/TCP,9153/TCP   10h
+monitoring    alertmanager          ClusterIP   10.96.169.215   <none>        9093/TCP                 10h
+monitoring    grafana               ClusterIP   10.96.151.79    <none>        3000/TCP                 10h
+monitoring    prometheus            ClusterIP   10.96.122.5     <none>        9090/TCP                 10h
+traininghub   ai-ops-service        ClusterIP   10.96.96.204    <none>        5005/TCP                 10h
+traininghub   certificate-service   ClusterIP   10.96.187.185   <none>        5004/TCP                 10h
+traininghub   course-service        ClusterIP   10.96.171.221   <none>        5002/TCP                 10h
+traininghub   frontend-service      ClusterIP   10.96.172.127   <none>        3000/TCP                 10h
+traininghub   mysql                 ClusterIP   10.96.2.4       <none>        3306/TCP                 10h
+traininghub   user-service          ClusterIP   10.96.63.101    <none>        5001/TCP                 10h
