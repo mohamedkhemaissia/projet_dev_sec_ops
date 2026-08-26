@@ -1,15 +1,20 @@
+from pathlib import Path
+
 from flask import Flask, jsonify
 
 from aiops_observability import init_observability
+from aiops_routes.dashboard import dashboard_bp
 from aiops_routes.incidents import incidents_bp
 from analyzer import build_analyzer
 from config import Config
 from metrics_context import PrometheusContextClient
 from store import IncidentStore
 
+SERVICE_ROOT = Path(__file__).resolve().parent
+
 
 def create_app(test_config=None, analyzer=None, metrics_client=None, store=None):
-    app = Flask(__name__)
+    app = Flask(__name__, root_path=str(SERVICE_ROOT))
     app.config.from_object(Config)
     if test_config:
         app.config.update(test_config)
@@ -28,6 +33,7 @@ def create_app(test_config=None, analyzer=None, metrics_client=None, store=None)
     )
 
     app.register_blueprint(incidents_bp)
+    app.register_blueprint(dashboard_bp)
     init_observability(app)
 
     @app.after_request

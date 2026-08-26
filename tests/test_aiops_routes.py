@@ -12,6 +12,7 @@ for module_name in [
     "analyzer",
     "aiops_observability",
     "aiops_routes",
+    "aiops_routes.dashboard",
     "aiops_routes.incidents",
     "metrics_context",
     "sanitization",
@@ -45,8 +46,9 @@ class FakeAnalyzer:
             "severity": "critical",
             "confidence": 0.8,
             "recommendations": ["Verifier la dependance"],
-            "analysis_mode": "test",
-            "model_metrics": {},
+            "analysis_mode": "ollama",
+            "model_severity": "warning",
+            "model_metrics": {"model": "gemma3:1b"},
         }
 
 
@@ -104,6 +106,75 @@ def test_metrics_are_exposed(client):
 
     assert response.status_code == 200
     assert b"traininghub_aiops_requests_total" in response.data
+
+
+def test_dashboard_displays_empty_state_without_incidents(client):
+    response = client.get("/dashboard")
+
+    assert response.status_code == 200
+    assert "Aucun incident AIOps détecté." in response.get_data(as_text=True)
+    assert b'<meta http-equiv="refresh" content="10">' in response.data
+
+
+def test_dashboard_displays_ollama_analysis_without_webhook_token(client):
+    created = client.post(
+        "/api/v1/alerts",
+        json=_alert_payload(),
+        headers=_headers(),
+    )
+
+    assert created.status_code == 201
+
+    response = client.get("/dashboard")
+    page = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "course-service" in page
+    assert "TrainingHubHighErrorRate" in page
+    assert "OLLAMA" in page
+    assert "gemma3:1b" in page
+    assert "80 %" in page
+    assert "Dependance indisponible" in page
+    assert "400.0 ms" in page
+    assert "test-token" not in page
+
+
+def test_dashboard_lists_newest_incident_first(client):
+    older = _alert_payload()
+    older["commonAnnotations"]["summary"] = "Incident plus ancien"
+    newer = _alert_payload()
+    newer["commonAnnotations"]["summary"] = "Incident le plus recent"
+
+    client.post("/api/v1/alerts", json=older, headers=_headers())
+    client.post("/api/v1/alerts", json=newer, headers=_headers())
+
+    page = client.get("/dashboard").get_data(as_text=True)
+    assert page.index("Incident le plus recent") < page.index("Incident plus ancien")
+
+
+@pytest.mark.parametrize(
+    ("status", "alertname", "severity", "expected_tone"),
+    [
+        ("firing", "TrainingHubServiceDown", "critical", "tone-critical"),
+        ("firing", "TrainingHubHighErrorRate", "warning", "tone-warning"),
+        ("resolved", "TrainingHubServiceDown", "critical", "tone-resolved"),
+    ],
+)
+def test_dashboard_applies_incident_color_priority(
+    client,
+    status,
+    alertname,
+    severity,
+    expected_tone,
+):
+    payload = _alert_payload(status=status)
+    payload["commonLabels"]["alertname"] = alertname
+    payload["commonLabels"]["severity"] = severity
+
+    client.post("/api/v1/alerts", json=payload, headers=_headers())
+
+    page = client.get("/dashboard").get_data(as_text=True)
+    assert expected_tone in page
 
 
 def test_alert_webhook_requires_token(client):

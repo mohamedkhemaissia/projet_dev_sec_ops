@@ -1,0 +1,382 @@
+:root {
+  color-scheme: light;
+  --background: #f4f7fb;
+  --surface: #ffffff;
+  --text: #172033;
+  --muted: #64748b;
+  --border: #dbe3ee;
+  --blue: #2563eb;
+  --critical: #dc2626;
+  --critical-soft: #fef2f2;
+  --warning: #d97706;
+  --warning-soft: #fff7ed;
+  --resolved: #15803d;
+  --resolved-soft: #f0fdf4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.55;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 1.5rem max(1.25rem, calc((100% - 1120px) / 2));
+  background: #12213a;
+  color: #ffffff;
+}
+
+.eyebrow {
+  margin: 0 0 0.2rem;
+  color: #93c5fd;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 0.3rem;
+  font-size: clamp(1.5rem, 4vw, 2.15rem);
+  line-height: 1.15;
+}
+
+.subtitle {
+  margin-bottom: 0;
+  color: #cbd5e1;
+}
+
+.refresh-button {
+  flex: 0 0 auto;
+  padding: 0.65rem 1rem;
+  border: 1px solid #60a5fa;
+  border-radius: 0.55rem;
+  color: #ffffff;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.refresh-button:hover,
+.refresh-button:focus-visible {
+  background: var(--blue);
+}
+
+.dashboard {
+  width: min(1120px, calc(100% - 2rem));
+  margin: 2rem auto 4rem;
+}
+
+.dashboard-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.dashboard-heading h2,
+.dashboard-heading p {
+  margin-bottom: 0;
+}
+
+.dashboard-heading p,
+.auto-refresh,
+.incident-date {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.empty-state {
+  padding: 3.5rem 1.5rem;
+  border: 1px dashed #a8b7ca;
+  border-radius: 0.85rem;
+  background: var(--surface);
+  text-align: center;
+}
+
+.empty-state h2 {
+  margin-bottom: 0.4rem;
+}
+
+.empty-state p {
+  margin-bottom: 0;
+  color: var(--muted);
+}
+
+.incident-list {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.incident-card {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-left: 0.4rem solid var(--blue);
+  border-radius: 0.85rem;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgb(15 23 42 / 7%);
+}
+
+.incident-card.tone-critical {
+  border-left-color: var(--critical);
+}
+
+.incident-card.tone-warning {
+  border-left-color: var(--warning);
+}
+
+.incident-card.tone-resolved {
+  border-left-color: var(--resolved);
+}
+
+.incident-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.tone-critical .incident-header {
+  background: var(--critical-soft);
+}
+
+.tone-warning .incident-header {
+  background: var(--warning-soft);
+}
+
+.tone-resolved .incident-header {
+  background: var(--resolved-soft);
+}
+
+.service-name {
+  margin-bottom: 0.2rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.incident-header h2 {
+  margin-bottom: 0.25rem;
+  overflow-wrap: anywhere;
+  font-size: clamp(1.2rem, 3vw, 1.55rem);
+}
+
+.incident-date {
+  margin-bottom: 0;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.badge {
+  padding: 0.32rem 0.62rem;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 0.73rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.tone-critical .badge {
+  background: var(--critical);
+  color: #ffffff;
+}
+
+.tone-warning .badge {
+  background: var(--warning);
+  color: #ffffff;
+}
+
+.tone-resolved .badge {
+  background: var(--resolved);
+  color: #ffffff;
+}
+
+.alert-details {
+  padding: 1.25rem 1.5rem 0;
+}
+
+.alert-details h3,
+.analysis-panel h3,
+.metrics-panel h3 {
+  margin-bottom: 0.8rem;
+  font-size: 1rem;
+}
+
+.alert-details p {
+  margin-bottom: 0.55rem;
+}
+
+.sections-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(250px, 0.75fr);
+  gap: 1rem;
+  padding: 1.25rem 1.5rem 1.5rem;
+}
+
+.analysis-panel,
+.metrics-panel {
+  padding: 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.7rem;
+}
+
+.analysis-panel {
+  background: #f8fafc;
+}
+
+.facts-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin: 0 0 1.2rem;
+}
+
+.facts-grid div {
+  min-width: 0;
+  padding: 0.65rem;
+  border-radius: 0.55rem;
+  background: #ffffff;
+}
+
+dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+dd {
+  margin: 0.15rem 0 0;
+  overflow-wrap: anywhere;
+  font-weight: 800;
+}
+
+.analysis-panel h4 {
+  margin: 1rem 0 0.35rem;
+  font-size: 0.9rem;
+}
+
+.analysis-panel p {
+  margin-bottom: 0;
+}
+
+.recommendations {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.recommendations li + li {
+  margin-top: 0.35rem;
+}
+
+.human-warning {
+  margin-top: 1rem !important;
+  padding: 0.7rem;
+  border-left: 3px solid var(--blue);
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.metric-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.metric {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.metric:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.metric span,
+.metrics-unavailable {
+  color: var(--muted);
+}
+
+.metric strong {
+  text-align: right;
+}
+
+.metrics-unavailable {
+  margin-bottom: 0;
+}
+
+@media (max-width: 780px) {
+  .page-header,
+  .dashboard-heading,
+  .incident-header {
+    align-items: flex-start;
+  }
+
+  .sections-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .facts-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .page-header,
+  .dashboard-heading,
+  .incident-header {
+    flex-direction: column;
+  }
+
+  .dashboard {
+    width: min(100% - 1rem, 1120px);
+    margin-top: 1rem;
+  }
+
+  .auto-refresh {
+    align-self: flex-start;
+  }
+
+  .badges {
+    justify-content: flex-start;
+  }
+
+  .alert-details,
+  .sections-grid,
+  .incident-header {
+    padding-right: 1rem;
+    padding-left: 1rem;
+  }
+}

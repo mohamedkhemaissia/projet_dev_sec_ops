@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="refresh" content="{{ refresh_seconds }}">
+    <title>TrainingHub — AIOps Incident Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+  </head>
+  <body>
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">TrainingHub</p>
+        <h1>AIOps Incident Assistant</h1>
+        <p class="subtitle">Diagnostic en lecture seule — décision finale par un opérateur humain</p>
+      </div>
+      <a class="refresh-button" href="{{ url_for('dashboard.dashboard') }}">Actualiser</a>
+    </header>
+
+    <main class="dashboard">
+      <div class="dashboard-heading">
+        <div>
+          <h2>Incidents récents</h2>
+          <p>{{ incidents|length }} incident{% if incidents|length != 1 %}s{% endif %} en mémoire</p>
+        </div>
+        <span class="auto-refresh">Actualisation automatique : {{ refresh_seconds }} s</span>
+      </div>
+
+      {% if not incidents %}
+        <section class="empty-state">
+          <h2>Aucun incident AIOps détecté.</h2>
+          <p>Les nouveaux incidents transmis par Alertmanager apparaîtront ici.</p>
+        </section>
+      {% endif %}
+
+      <div class="incident-list">
+        {% for incident in incidents %}
+          {% set analysis = incident.get('analysis', {}) %}
+          {% set metrics = incident.get('metrics', {}) %}
+          {% set metric_values = metrics.get('values', {}) %}
+          {% set status = incident.get('status', 'unknown')|lower %}
+          {% set severity = incident.get('severity', 'info')|lower %}
+          {% set availability = metric_values.get('availability') %}
+
+          <article class="incident-card
+            {%- if status == 'resolved' %} tone-resolved
+            {%- elif severity == 'critical' or (availability is number and availability == 0) %} tone-critical
+            {%- elif severity == 'warning' %} tone-warning
+            {%- else %} tone-info{% endif %}">
+            <div class="incident-header">
+              <div>
+                <p class="service-name">{{ incident.get('service', 'unknown') }}</p>
+                <h2>{{ incident.get('alertname', 'UnknownAlert') }}</h2>
+                <p class="incident-date">
+                  {{ incident.get('created_at', '')[:19]|replace('T', ' ') }} UTC
+                </p>
+              </div>
+              <div class="badges" aria-label="État de l'incident">
+                <span class="badge badge-severity">{{ severity|upper }}</span>
+                <span class="badge badge-status">{{ status|upper }}</span>
+              </div>
+            </div>
+
+            <section class="alert-details" aria-labelledby="alert-{{ incident.get('id', loop.index) }}">
+              <h3 id="alert-{{ incident.get('id', loop.index) }}">Détails de l’alerte</h3>
+              <p><strong>Résumé :</strong> {{ incident.get('summary') or 'Non renseigné' }}</p>
+              <p><strong>Description :</strong> {{ incident.get('description') or 'Non renseignée' }}</p>
+            </section>
+
+            <div class="sections-grid">
+              <section class="analysis-panel">
+                <h3>Analyse IA</h3>
+                <dl class="facts-grid">
+                  <div>
+                    <dt>Mode</dt>
+                    <dd>{{ analysis.get('analysis_mode', 'unknown')|upper }}</dd>
+                  </div>
+                  <div>
+                    <dt>Modèle</dt>
+                    <dd>{{ analysis.get('model_metrics', {}).get('model') or 'Non utilisé' }}</dd>
+                  </div>
+                  <div>
+                    <dt>Confiance</dt>
+                    <dd>
+                      {% if analysis.get('confidence') is number %}
+                        {{ (analysis.get('confidence') * 100)|round|int }} %
+                      {% else %}
+                        —
+                      {% endif %}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Sévérité du modèle</dt>
+                    <dd>{{ analysis.get('model_severity')|upper if analysis.get('model_severity') else 'Non applicable' }}</dd>
+                  </div>
+                </dl>
+
+                {% if analysis.get('summary') %}
+                  <h4>Résumé de l’analyse</h4>
+                  <p>{{ analysis.get('summary') }}</p>
+                {% endif %}
+
+                <h4>Cause probable</h4>
+                <p>{{ analysis.get('probable_cause') or 'Cause non déterminée.' }}</p>
+
+                <h4>Recommandations</h4>
+                {% if analysis.get('recommendations') %}
+                  <ul class="recommendations">
+                    {% for recommendation in analysis.get('recommendations') %}
+                      <li>{{ recommendation }}</li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <p>Aucune recommandation disponible.</p>
+                {% endif %}
+
+                <p class="human-warning">Recommandations informatives uniquement — aucune action automatique.</p>
+              </section>
+
+              <section class="metrics-panel">
+                <h3>Contexte Prometheus</h3>
+                {% if metrics.get('available') %}
+                  <div class="metric-list">
+                    <div class="metric">
+                      <span>Availability</span>
+                      <strong>{{ availability if availability is not none else '—' }}</strong>
+                    </div>
+                    <div class="metric">
+                      <span>HTTP 5xx rate</span>
+                      <strong>
+                        {% if metric_values.get('http_5xx_rate') is number %}
+                          {{ '%.3f'|format(metric_values.get('http_5xx_rate')) }} req/s
+                        {% else %}
+                          —
+                        {% endif %}
+                      </strong>
+                    </div>
+                    <div class="metric">
+                      <span>P95 latency</span>
+                      <strong>
+                        {% if metric_values.get('p95_latency_seconds') is number %}
+                          {{ '%.1f'|format(metric_values.get('p95_latency_seconds') * 1000) }} ms
+                        {% else %}
+                          —
+                        {% endif %}
+                      </strong>
+                    </div>
+                  </div>
+                {% else %}
+                  <p class="metrics-unavailable">
+                    Métriques indisponibles : {{ metrics.get('reason', 'raison inconnue') }}
+                  </p>
+                {% endif %}
+              </section>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    </main>
+  </body>
+</html>
