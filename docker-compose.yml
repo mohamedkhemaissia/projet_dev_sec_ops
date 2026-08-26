@@ -184,7 +184,7 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  # --- SHIFT RIGHT: METRIQUES, DASHBOARDS ET ALERTES ---
+  # --- MONITORING ET OBSERVABILITE: METRIQUES, DASHBOARDS ET ALERTES ---
   prometheus:
     image: prom/prometheus:v3.5.0
     restart: unless-stopped

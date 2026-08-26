@@ -251,7 +251,7 @@
   "schemaVersion": 41,
   "tags": [
     "traininghub",
-    "shift-right",
+    "observability",
     "devsecops"
   ],
   "templating": {
@@ -263,7 +263,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "TrainingHub - Shift Right",
-  "uid": "traininghub-shift-right",
+  "title": "TrainingHub - Observability",
+  "uid": "traininghub-observability",
   "version": 1
 }

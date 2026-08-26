@@ -17,7 +17,7 @@ Ce dossier contient les preuves techniques collectées durant la validation du p
 ## CI/CD
 - `github-actions-ci.json` : derniers runs CI sur la branche main.
 - `github-actions-ci-jobs.json` : détails des jobs et contrôles DevSecOps exécutés.
-- `github-actions-workflows.txt` : déclencheurs CI, CD Kubernetes et DAST.
+- `github-actions-workflows.txt` : déclencheurs CI et CD Kubernetes.
 
 ## État validé
 La chaîne suivante a été validée :

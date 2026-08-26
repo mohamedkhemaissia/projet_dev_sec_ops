@@ -1,17 +1,20 @@
-# Shift Right et observabilite de TrainingHub
+# Monitoring et observabilite de TrainingHub
 
 ## Objectif
 
-Le Shift Left detecte les defauts avant le deploiement. Le Shift Right observe
-le comportement reel de l'application apres son deploiement et renvoie un
-feedback exploitable vers l'equipe.
+TrainingHub integre l'observabilite apres le deploiement afin de mesurer le
+comportement reel de l'application et de fournir un retour exploitable a
+l'operateur humain. Cette capacite complete les controles Shift Left executes
+avant publication sans constituer une fonction de securite dynamique.
 
-TrainingHub couvre maintenant les deux directions :
+Le perimetre realise comprend :
 
-- Shift Left : Gitleaks, Flake8, Pytest, Bandit, pip-audit, Trivy IaC et Docker
-  Scout ;
-- Shift Right : metriques applicatives, dashboard, alertes, logs structures,
-  health checks, smoke tests, rollback et DAST OWASP ZAP.
+- les metriques applicatives et les metriques standard des processus Python ;
+- un dashboard Grafana provisionne automatiquement ;
+- des alertes de disponibilite, de taux d'erreur et de latence ;
+- des logs structures et correles ;
+- les health checks, smoke tests et mecanismes de rollback ;
+- une assistance AIOps fondee sur les alertes et le contexte Prometheus.
 
 ## Architecture
 
@@ -24,11 +27,16 @@ flowchart LR
     Prom --> Grafana[Dashboard Grafana]
     Prom --> Rules[Regles d'alerte]
     Rules --> Alertmanager[Alertmanager]
-    Alertmanager --> Feedback[Feedback et remediation]
+    Alertmanager -->|Webhook authentifie| AIOps[ai-ops-service]
+    AIOps -->|PromQL en lecture seule| Prom
+    AIOps -. contexte nettoye .-> Ollama[Ollama / Gemma optionnel]
+    AIOps --> Human[Operateur humain]
     CD[CD Kubernetes] --> App
-    CD --> ZAP[OWASP ZAP Baseline]
-    ZAP --> Report[Rapport DAST]
 ```
+
+L'assistant ne possede aucun acces de remediation a Kubernetes, Docker ou
+MySQL. Ses diagnostics et recommandations restent soumis a la validation de
+l'operateur humain.
 
 ## Demarrage local
 
@@ -43,7 +51,7 @@ Interfaces :
 | --- | --- | --- |
 | TrainingHub | `http://localhost:3000` | Application |
 | Prometheus | `http://localhost:9090` | Cibles, requetes et alertes |
-| Grafana | `http://localhost:3001` | Dashboard `TrainingHub - Shift Right` |
+| Grafana | `http://localhost:3001` | Dashboard `TrainingHub - Observability` |
 | Alertmanager | `http://localhost:9093` | Alertes actives et resolues |
 
 Grafana autorise la consultation anonyme en lecture seule. Le compte
@@ -113,6 +121,17 @@ ensuite immediatement le service :
 docker compose start course-service
 ```
 
+## Assistance AIOps basee sur l'observabilite
+
+Alertmanager envoie les alertes a `ai-ops-service` par un webhook authentifie.
+Le service enrichit chaque incident avec des requetes PromQL placees sur liste
+blanche, puis utilise des regles deterministes ou le modele local Gemma via
+Ollama. Le dashboard AIOps restitue l'analyse a un operateur humain.
+
+Cette assistance est strictement en lecture seule : elle ne peut ni modifier le
+cluster ni declencher de remediation automatique. Les details d'architecture et
+d'evaluation se trouvent dans `aiops-architecture.md` et `aiops-evaluation.md`.
+
 ## Logs et correlation
 
 Chaque reponse contient `X-Request-ID`. Chaque service produit un log JSON avec
@@ -122,33 +141,24 @@ passe, JWT, corps de requete et parametres sensibles ne sont jamais journalises.
 Les logs restent consultables avec :
 
 ```powershell
-docker compose logs -f user-service course-service certificate-service frontend-service
+docker compose logs -f user-service course-service certificate-service frontend-service ai-ops-service
 ```
 
 Loki ou Elasticsearch peut etre ajoute ulterieurement pour leur centralisation,
-mais ce n'est pas necessaire pour demontrer la boucle Shift Right du MVP.
-
-## DAST OWASP ZAP
-
-Le workflow `.github/workflows/dast.yml` execute un scan passif OWASP ZAP :
-
-- manuellement avec l'URL de staging ;
-- apres un CD reussi si la variable GitHub `DAST_TARGET_URL` est definie ;
-- chaque lundi si cette variable est disponible.
-
-Le rapport est conserve comme artefact GitHub Actions. Le scan est initialement
-non bloquant afin de permettre le triage de la baseline. Apres classification
-des alertes legitimes, passer `fail_action` a `true` pour en faire un quality
-gate.
-
-Un scan actif agressif ne doit pas etre lance sur un environnement de production
-sans autorisation et fenetre de maintenance.
+mais ce n'est pas necessaire pour demontrer le monitoring et l'observabilite du
+MVP.
 
 ## Limites et extensions
 
 - Alertmanager affiche les alertes localement. Un receiver e-mail, Slack ou
   Teams necessite un secret externe.
 - Les annotations Kubernetes permettent a une instance Prometheus du namespace
-  `monitoring` de decouvrir les quatre services.
+  `monitoring` de decouvrir les services.
 - Falco, OpenTelemetry, Jaeger et Loki sont des extensions possibles, non
   obligatoires pour le perimetre PFE.
+
+## Perspectives
+
+En perspective, des tests de securite dynamiques (DAST) avec OWASP ZAP pourraient
+etre integres sur un environnement de staging afin de completer les controles
+Shift Left.

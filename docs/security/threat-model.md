@@ -28,9 +28,8 @@ Les clients de demonstration sont le portail web et Postman.
 5. hote local vers les conteneurs Docker ;
 6. Prometheus vers les endpoints `/metrics` des services ;
 7. Grafana et Alertmanager vers Prometheus ;
-8. OWASP ZAP vers l'environnement de staging deploye.
-9. Alertmanager vers le webhook AIOps authentifie ;
-10. AIOps vers Prometheus et vers l'API locale Ollama.
+8. Alertmanager vers le webhook AIOps authentifie ;
+9. AIOps vers Prometheus et vers l'API locale Ollama.
 
 ## Analyse STRIDE
 
@@ -56,7 +55,6 @@ Les clients de demonstration sont le portail web et Postman.
 | Publication non autorisee | Permissions minimales du workflow et authentification GHCR |
 | Mauvaise configuration IaC | Rendu Kustomize et scan Trivy avant build |
 | Mouvement lateral dans le cluster | NetworkPolicy en refus par defaut |
-| Regression dynamique | OWASP ZAP Baseline apres deploiement |
 | Incident non detecte | Metriques, alertes, request ID et logs structures |
 
 ## Menaces propres a l'assistant AIOps

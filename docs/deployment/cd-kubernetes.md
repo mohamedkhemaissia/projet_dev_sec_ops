@@ -6,20 +6,18 @@ manuellement avec le tag GHCR immuable d'une ancienne execution CI.
 
 ## Fonctionnement
 
-1. Le workflow CI teste, analyse, construit et publie les quatre images GHCR avec
+1. Le workflow CI teste, analyse, construit et publie les cinq images GHCR avec
    le numero de l'execution comme tag.
 2. Le workflow CD recupere exactement le commit teste et le meme numero de tag.
 3. L'overlay `k8s/overlays/production` rend les manifests sans le
    `k8s/secret.yaml` de demonstration locale.
 4. Les secrets Kubernetes sont crees depuis l'environnement GitHub
    `production`.
-5. Kubernetes effectue un rolling update des trois microservices et du frontend.
-6. Le workflow attend chaque rollout, puis teste les quatre routes de sante via
+5. Kubernetes effectue un rolling update des cinq services.
+6. Le workflow attend chaque rollout, puis teste les cinq routes de sante via
    le proxy de l'API Kubernetes.
 7. Un rollout ou un smoke test en echec restaure les versions precedentes des
-   quatre services applicatifs.
-8. Apres un CD reussi, le workflow DAST lance OWASP ZAP si la variable
-   `DAST_TARGET_URL` est configuree.
+   cinq services.
 
 Les deploiements sont serialises avec le groupe de concurrence
 `traininghub-production`. Une execution plus recente n'annule pas un
@@ -49,11 +47,6 @@ Dans `Settings > Environments`, creer l'environnement `production`. Il est
 recommande d'ajouter une approbation obligatoire et de limiter les branches de
 deploiement a `main`.
 
-Dans `Settings > Secrets and variables > Actions > Variables`, definir
-`DAST_TARGET_URL` avec l'URL HTTPS publique de l'environnement de staging si le
-scan post-deploiement doit etre automatique. Une URL Minikube locale n'est pas
-joignable par un runner GitHub heberge.
-
 Ajouter ensuite ces secrets a l'environnement :
 
 | Secret | Contenu |
@@ -66,6 +59,7 @@ Ajouter ensuite ces secrets a l'environnement :
 | `MYSQL_ROOT_PASSWORD` | Mot de passe root MySQL |
 | `MYSQL_PASSWORD` | Mot de passe de l'utilisateur applicatif MySQL |
 | `DEFAULT_ADMIN_PASSWORD` | Mot de passe initial du compte administrateur |
+| `AIOPS_WEBHOOK_TOKEN` | Jeton partage utilise par Alertmanager pour authentifier le webhook AIOps |
 
 Sous PowerShell, produire la valeur `KUBE_CONFIG_B64` sans modifier le fichier :
 
@@ -91,6 +85,7 @@ ghcr.io/organisation/user-service:42
 ghcr.io/organisation/course-service:42
 ghcr.io/organisation/certificate-service:42
 ghcr.io/organisation/frontend-service:42
+ghcr.io/organisation/ai-ops-service:42
 ```
 
 ## Redeployer ou revenir a un tag connu
@@ -107,4 +102,5 @@ kubectl rollout history deployment/user-service -n traininghub
 kubectl rollout history deployment/course-service -n traininghub
 kubectl rollout history deployment/certificate-service -n traininghub
 kubectl rollout history deployment/frontend-service -n traininghub
+kubectl rollout history deployment/ai-ops-service -n traininghub
 ```

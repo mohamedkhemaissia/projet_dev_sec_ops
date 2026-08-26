@@ -67,8 +67,9 @@ Services exposes:
 - Grafana: `http://localhost:3001`
 - Alertmanager: `http://localhost:9093`
 
-Le dashboard `TrainingHub - Shift Right` est provisionne automatiquement dans
-Grafana. Les quatre services exposent leurs metriques sur `/metrics`.
+Le dashboard `TrainingHub - Observability` est provisionne automatiquement dans
+Grafana. Les services applicatifs et AIOps exposent leurs metriques sur
+`/metrics`.
 
 Si un ancien volume MySQL contient les anciennes tables, reinitialiser le volume:
 
@@ -288,8 +289,7 @@ A chaque push sur `main` ou `develop`, GitHub Actions execute:
 4. Build Docker + scan Docker Scout des vulnerabilites critiques et hautes corrigibles
 5. Push des images vers ghcr.io sur `main`
 6. Deploiement Kubernetes apres validation de l'environnement `production`
-7. Verification des rollouts et smoke tests des quatre services
-8. DAST OWASP ZAP sur l'environnement de staging configure
+7. Verification des rollouts et smoke tests des services deployes
 
 Images construites:
 
@@ -297,32 +297,34 @@ Images construites:
 - `course-service`
 - `certificate-service`
 - `frontend-service`
+- `ai-ops-service`
 
 La configuration du CD, des secrets GitHub et du rollback est documentee dans
 `docs/deployment/cd-kubernetes.md`.
 
-## Shift Right
+## Monitoring et observabilite
 
-Le projet ferme la boucle apres le deploiement avec :
+Le projet observe les services apres leur deploiement avec :
 
 - metriques Prometheus sur les services applicatifs et AIOps ;
 - dashboard Grafana provisionne automatiquement dans Docker Compose et Kubernetes ;
 - alertes de disponibilite, taux d'erreur et latence ;
 - logs JSON correles par `X-Request-ID` ;
-- health checks Kubernetes, smoke tests et rollback ;
-- scan DAST OWASP ZAP manuel, planifie ou post-deploiement.
+- health checks Kubernetes, smoke tests et rollback.
 
-Voir `docs/observability-shift-right.md` pour le lancement, les requetes PromQL,
-la demonstration d'une alerte et la configuration du DAST.
+Voir `docs/observability.md` pour le lancement, les requetes PromQL et la
+demonstration d'une alerte.
 Le deploiement Kubernetes du monitoring est documente dans
 `k8s/monitoring/README.md`.
 
-### Assistant AIOps
+### Assistance AIOps basee sur l'observabilite
 
 TrainingHub inclut un assistant d'analyse d'incidents en lecture seule. Il recoit
 les alertes d'Alertmanager, enrichit le contexte depuis Prometheus et genere un
 diagnostic structure. Le mode `rules` est reproductible sans modele ; le mode
 `ollama` active une analyse LLM locale avec repli automatique.
+L'assistant reste en lecture seule, ne declenche aucune remediation automatique
+et soumet ses recommandations a un operateur humain.
 
 Apres le demarrage Docker Compose, lancer un scenario controle avec :
 
@@ -344,7 +346,7 @@ Les premiers resultats comparatifs sont presentes dans
 - Parcours metier : `docs/diagrams/business-flow.md`
 - Pipeline DevSecOps : `docs/diagrams/ci-cd-pipeline.md`
 - Modele de menaces STRIDE : `docs/security/threat-model.md`
-- Shift Right et observabilite : `docs/observability-shift-right.md`
+- Monitoring et observabilite : `docs/observability.md`
 - Matrice de couverture DevSecOps : `docs/devsecops-coverage.md`
 - Assistant AIOps : `docs/aiops-architecture.md`
 - Evaluation AIOps : `docs/aiops-evaluation.md`

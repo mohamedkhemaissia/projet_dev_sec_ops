@@ -43,12 +43,11 @@ flowchart LR
         NetPol -. limite les flux .-> DB
     end
 
-    subgraph ShiftRight[Observabilite et Shift Right]
+    subgraph Observability[Monitoring et observabilite]
         Prometheus[Prometheus]
         Grafana[Grafana]
         Alertmanager[Alertmanager]
         LLM[Ollama local optionnel]
-        ZAP[OWASP ZAP]
 
         Prometheus --> Grafana
         Prometheus --> Alertmanager
@@ -57,12 +56,14 @@ flowchart LR
         AIOps -. contexte nettoye .-> LLM
     end
 
+    Human[Operateur humain]
+
     Browser -->|HTTP / session| Ingress
     Client -->|HTTP / JSON / JWT| Ingress
     Prometheus -. collecte /metrics .-> Frontend
     Prometheus -. collecte /metrics .-> APIs
     Prometheus -. collecte /metrics .-> AIOps
-    ZAP -. DAST staging .-> Ingress
+    AIOps -->|Diagnostic et recommandations| Human
     User -. emet le JWT .-> Client
     Certificate -. retourne le PDF .-> Client
 ```
@@ -75,7 +76,7 @@ flowchart LR
 | `course-service` | Catalogue, inscriptions et statut de completion |
 | `certificate-service` | Emission, consultation, verification et PDF |
 | `frontend-service` | Portail web public, learner et admin |
-| `ai-ops-service` | Qualification en lecture seule des alertes et rapports d'incident |
+| `ai-ops-service` | Assistance AIOps basee sur l'observabilite, en lecture seule et sans remediation automatique |
 | MySQL | Persistance partagee du MVP |
 | Ingress | Point d'entree et routage HTTP |
 | HPA | Adaptation du nombre de replicas selon la charge |
@@ -84,4 +85,4 @@ flowchart LR
 | Grafana | Visualisation de la disponibilite, des erreurs et de la latence |
 | Alertmanager | Regroupement et suivi des alertes |
 | Ollama | Generation locale optionnelle du diagnostic structure |
-| OWASP ZAP | Test dynamique passif de l'environnement deploye |
+| Operateur humain | Validation des diagnostics et decision de remediation |

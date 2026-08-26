@@ -1,7 +1,7 @@
 # Deroule de demonstration pour la soutenance
 
 Ce scenario tient en environ douze minutes et montre la valeur metier, la
-demarche DevSecOps et la boucle Shift Right.
+demarche DevSecOps, l'observabilite et l'assistance AIOps.
 
 ## Preparation avant l'arrivee du jury
 
@@ -45,8 +45,7 @@ Afficher `.github/workflows/ci.yml`, puis expliquer :
 6. Docker Scout analyse les images ;
 7. Trivy analyse le manifeste Kubernetes de production ;
 8. les images validees sont publiees dans GHCR ;
-9. le CD effectue le rolling update et les smoke tests ;
-10. OWASP ZAP teste l'environnement deploye.
+9. le CD effectue le rolling update et les smoke tests.
 
 Montrer ensuite un run GitHub Actions vert.
 
@@ -92,32 +91,34 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-business-scenari
   -FrontendBaseUrl http://traininghub.local
 ```
 
-## 5. Shift Right - 3 minutes
+## 5. Monitoring, observabilite et AIOps - 3 minutes
 
 Ouvrir :
 
 - Grafana sur `http://localhost:3001`, dashboard
-  `TrainingHub - Shift Right` ;
+  `TrainingHub - Observability` ;
 - Prometheus sur `http://localhost:9090/targets`, avec les huit replicas
-  applicatifs `UP` ;
+  applicatifs et `ai-ops-service` `UP` ;
 - Alertmanager sur `http://localhost:9093`.
 
 Expliquer que :
 
 - Prometheus decouvre automatiquement les pods annotes ;
-- le dashboard regroupe les replicas en quatre services ;
+- le dashboard regroupe les cibles par service ;
 - `/health` et `/metrics` sont exclus du debit metier ;
 - les erreurs 5xx valent zero en absence d'erreur ;
 - les alertes couvrent disponibilite, taux 5xx et latence p95.
 
-Montrer enfin le workflow `DAST Shift Right` et un rapport OWASP ZAP si une URL
-de staging est disponible.
+Montrer enfin le dashboard AIOps : Alertmanager transmet une alerte au service,
+qui enrichit le contexte depuis Prometheus, interroge Ollama/Gemma si ce mode est
+active et restitue une recommandation a l'operateur humain. Preciser que le
+service reste en lecture seule et ne declenche aucune remediation automatique.
 
 ## 6. Conclusion - 1 minute
 
 Le MVP est fonctionnel, teste, conteneurise, securise par des controles Shift
-Left, deployable automatiquement et observe apres deploiement grace au Shift
-Right.
+Left, deployable automatiquement et supervise apres deploiement avec une
+assistance AIOps en lecture seule.
 
 ## Solution de secours
 
@@ -127,7 +128,7 @@ Avant la soutenance, conserver des captures :
 - scenario metier entierement vert ;
 - run GitHub Actions vert ;
 - dashboard Grafana et cibles Prometheus ;
-- rapport OWASP ZAP ;
+- dashboard AIOps et exemple d'incident analyse ;
 - certificat PDF genere.
 
 Si Kubernetes n'est pas disponible, lancer `docker compose up -d` et utiliser

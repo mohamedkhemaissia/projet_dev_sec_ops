@@ -15,7 +15,7 @@
 | Securite IaC | Termine | Rendu Kustomize de production et scan Trivy bloquant |
 | Publication | Termine | Images versionnees dans GHCR sur `main` |
 | CD Kubernetes | Implemente | Workflow, environnement production, smoke tests et rollback |
-| Shift Right | Termine pour le MVP | Prometheus, Grafana et Alertmanager dans Docker Compose et Kubernetes, logs JSON et OWASP ZAP |
+| Observabilite | Termine pour le MVP | Prometheus, Grafana et Alertmanager dans Docker Compose et Kubernetes, metriques, alertes et logs JSON |
 | Securite runtime | Termine pour le MVP | NetworkPolicy, non-root, seccomp, limites et rate limiting Ingress |
 | Demonstration | Termine | Portail web et collection Postman testée de bout en bout |
 | Documentation securite | Termine | Politique de securite et threat model STRIDE |
@@ -83,9 +83,8 @@ Ces actions ne demandent plus de developpement :
 6. inserer les captures GitHub Actions, Docker, Kubernetes et Postman dans le
    memoire ;
 7. capturer le dashboard Grafana, les cibles Prometheus et une alerte ;
-8. executer OWASP ZAP contre une URL de staging accessible ;
-9. preparer une courte demonstration orale fondee sur le portail, le pipeline
-   et la boucle Shift Right.
+8. preparer une courte demonstration orale fondee sur le portail, le pipeline,
+   l'observabilite et l'assistance AIOps.
 
 Le cluster de production et le rapport academique sont des livrables externes au
 code. Le MVP du depot est fonctionnel et demonstrable sans eux avec Docker

@@ -15,7 +15,7 @@ Decrire le probleme traite et la valeur du changement.
 ## Preuves
 
 Ajouter les commandes executees, captures utiles ou liens vers les rapports CI,
-DAST et observabilite.
+les scans Shift Left et les interfaces d'observabilite.
 
 ## Risque et retour arriere
 

@@ -12,6 +12,7 @@ flowchart LR
         Users[2+ pods user-service]
         Courses[2+ pods course-service]
         Certificates[2+ pods certificate-service]
+        AIOps[ai-ops-service en lecture seule]
     end
 
     subgraph MON[Namespace monitoring]
@@ -20,17 +21,27 @@ flowchart LR
         Alertmanager[Alertmanager]
     end
 
+    Ollama[Ollama / Gemma optionnel]
+    Human[Operateur humain]
+
     Prometheus -->|Kubernetes SD + /metrics| Frontend
     Prometheus -->|Kubernetes SD + /metrics| Users
     Prometheus -->|Kubernetes SD + /metrics| Courses
     Prometheus -->|Kubernetes SD + /metrics| Certificates
+    Prometheus -->|Kubernetes SD + /metrics| AIOps
     Grafana --> Prometheus
     Prometheus --> Alertmanager
+    Alertmanager -->|Webhook authentifie| AIOps
+    AIOps -->|PromQL en lecture seule| Prometheus
+    AIOps -. contexte nettoye .-> Ollama
+    AIOps -->|Diagnostic et recommandations| Human
 ```
 
 Prometheus utilise l'API Kubernetes avec un `ServiceAccount` et un RBAC en
 lecture seule. Il decouvre uniquement les pods `Running` du namespace
 `traininghub` qui portent l'annotation `prometheus.io/scrape: "true"`.
+L'assistance AIOps exploite ces donnees sans permission de remediation ; toute
+decision reste sous le controle de l'operateur humain.
 
 ## Prerequis
 
@@ -73,7 +84,7 @@ Interfaces :
 
 | Composant | URL | Verification |
 | --- | --- | --- |
-| Grafana | `http://localhost:3001` | Dashboard `TrainingHub - Shift Right` |
+| Grafana | `http://localhost:3001` | Dashboard `TrainingHub - Observability` |
 | Prometheus | `http://localhost:9090/targets` | Tous les replicas `UP` |
 | Alertmanager | `http://localhost:9093` | Alertes actives et resolues |
 

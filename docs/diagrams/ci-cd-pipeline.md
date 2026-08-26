@@ -13,7 +13,7 @@ flowchart LR
         SAST[Bandit]
         SCA[pip-audit]
         IaC[Trivy IaC]
-        Build[Build des 4 images]
+        Build[Build des 5 images]
         Scan[Docker Scout]
 
         Secrets --> Lint --> Tests --> SAST --> SCA --> IaC --> Build --> Scan
@@ -34,27 +34,30 @@ flowchart LR
     end
 
     GHCR --> CD
-    Verify -->|succes| Running[TrainingHub disponible]
+    Verify -->|succes| Running[TrainingHub sur Kubernetes]
 
-    subgraph ShiftRight[Shift Right]
-        Metrics[Prometheus<br/>metriques RED]
+    subgraph Observability[Monitoring et observabilite]
+        Prometheus[Prometheus<br/>metriques RED]
         Dashboard[Grafana]
         Alerts[Alertmanager]
-        DAST[OWASP ZAP]
-        Feedback[Feedback et remediation]
+        AIOps[ai-ops-service<br/>lecture seule]
+        LLM[Ollama / Gemma<br/>optionnel]
+        Human[Operateur humain]
 
-        Metrics --> Dashboard
-        Metrics --> Alerts
-        DAST --> Feedback
-        Alerts --> Feedback
+        Prometheus --> Dashboard
+        Prometheus --> Alerts
+        Alerts --> AIOps
+        AIOps -->|PromQL lecture seule| Prometheus
+        AIOps -. contexte nettoye .-> LLM
+        AIOps --> Human
     end
 
-    Running --> Metrics
-    Running --> DAST
-    Feedback --> Dev
+    Running --> Prometheus
+    Human -. feedback valide .-> Dev
 ```
 
 Le CD n'utilise jamais le secret Kubernetes de demonstration locale. Les valeurs
 de production proviennent de l'environnement GitHub protege `production`.
-Le Shift Right ferme la boucle grace aux metriques, aux alertes et au rapport
-DAST produit apres deploiement.
+Prometheus, Grafana et Alertmanager supervisent les services deployes. L'assistant
+AIOps enrichit les alertes avec le contexte Prometheus et, en option, Ollama ; il
+reste en lecture seule et transmet ses recommandations a l'operateur humain.

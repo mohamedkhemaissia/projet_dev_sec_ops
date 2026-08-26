@@ -1,7 +1,6 @@
 ]633;E;echo "=== WORKFLOWS ===";994cf873-d6fb-4b91-8797-4050fa39690a]633;C=== WORKFLOWS ===
 CD Kubernetes	active	332540277
 CI	active	293771811
-DAST Shift Right	active	332540278
 Dependabot Updates	active	332540346
 
 === CI TRIGGER ===
@@ -37,20 +36,3 @@ permissions:
 
 concurrency:
   group: traininghub-production
-
-=== DAST TRIGGER ===
-name: DAST Shift Right
-
-on:
-  workflow_dispatch:
-    inputs:
-      target_url:
-        description: URL of the deployed staging environment to scan
-        required: true
-        type: string
-
-permissions:
-  contents: read
-
-jobs:
-  zap-baseline:
