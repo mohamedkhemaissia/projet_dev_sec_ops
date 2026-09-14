@@ -8,7 +8,6 @@ flowchart LR
     subgraph Kubernetes[Cluster Kubernetes - namespace traininghub]
         Ingress[NGINX Ingress]
         Frontend[frontend-service<br/>Port 3000]
-        AIOps[ai-ops-service<br/>Port 5005]
 
         subgraph APIs[Microservices Flask]
             User[user-service<br/>Port 5001]
@@ -36,7 +35,6 @@ flowchart LR
         DB --- PVC
         Config --> APIs
         Secrets --> APIs
-        Secrets --> AIOps
         HPA -. ajuste les replicas .-> APIs
         HPA -. ajuste les replicas .-> Frontend
         NetPol -. limite les flux .-> APIs
@@ -47,23 +45,15 @@ flowchart LR
         Prometheus[Prometheus]
         Grafana[Grafana]
         Alertmanager[Alertmanager]
-        LLM[Ollama local optionnel]
 
         Prometheus --> Grafana
         Prometheus --> Alertmanager
-        Alertmanager -->|Webhook authentifie| AIOps
-        AIOps -->|PromQL lecture seule| Prometheus
-        AIOps -. contexte nettoye .-> LLM
     end
-
-    Human[Operateur humain]
 
     Browser -->|HTTP / session| Ingress
     Client -->|HTTP / JSON / JWT| Ingress
     Prometheus -. collecte /metrics .-> Frontend
     Prometheus -. collecte /metrics .-> APIs
-    Prometheus -. collecte /metrics .-> AIOps
-    AIOps -->|Diagnostic et recommandations| Human
     User -. emet le JWT .-> Client
     Certificate -. retourne le PDF .-> Client
 ```
@@ -76,7 +66,6 @@ flowchart LR
 | `course-service` | Catalogue, inscriptions et statut de completion |
 | `certificate-service` | Emission, consultation, verification et PDF |
 | `frontend-service` | Portail web public, learner et admin |
-| `ai-ops-service` | Assistance AIOps basee sur l'observabilite, en lecture seule et sans remediation automatique |
 | MySQL | Persistance partagee du MVP |
 | Ingress | Point d'entree et routage HTTP |
 | HPA | Adaptation du nombre de replicas selon la charge |
@@ -84,5 +73,3 @@ flowchart LR
 | Prometheus | Collecte et evaluation des metriques |
 | Grafana | Visualisation de la disponibilite, des erreurs et de la latence |
 | Alertmanager | Regroupement et suivi des alertes |
-| Ollama | Generation locale optionnelle du diagnostic structure |
-| Operateur humain | Validation des diagnostics et decision de remediation |

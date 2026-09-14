@@ -40,16 +40,9 @@ flowchart LR
         Prometheus[Prometheus<br/>metriques RED]
         Dashboard[Grafana]
         Alerts[Alertmanager]
-        AIOps[ai-ops-service<br/>lecture seule]
-        LLM[Ollama / Gemma<br/>optionnel]
-        Human[Operateur humain]
 
         Prometheus --> Dashboard
         Prometheus --> Alerts
-        Alerts --> AIOps
-        AIOps -->|PromQL lecture seule| Prometheus
-        AIOps -. contexte nettoye .-> LLM
-        AIOps --> Human
     end
 
     Running --> Prometheus
@@ -58,6 +51,4 @@ flowchart LR
 
 Le CD n'utilise jamais le secret Kubernetes de demonstration locale. Les valeurs
 de production proviennent de l'environnement GitHub protege `production`.
-Prometheus, Grafana et Alertmanager supervisent les services deployes. L'assistant
-AIOps enrichit les alertes avec le contexte Prometheus et, en option, Ollama ; il
-reste en lecture seule et transmet ses recommandations a l'operateur humain.
+Prometheus, Grafana et Alertmanager supervisent les services deployes.

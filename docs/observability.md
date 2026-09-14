@@ -13,8 +13,7 @@ Le perimetre realise comprend :
 - un dashboard Grafana provisionne automatiquement ;
 - des alertes de disponibilite, de taux d'erreur et de latence ;
 - des logs structures et correles ;
-- les health checks, smoke tests et mecanismes de rollback ;
-- une assistance AIOps fondee sur les alertes et le contexte Prometheus.
+- les health checks, smoke tests et mecanismes de rollback.
 
 ## Architecture
 
@@ -27,16 +26,8 @@ flowchart LR
     Prom --> Grafana[Dashboard Grafana]
     Prom --> Rules[Regles d'alerte]
     Rules --> Alertmanager[Alertmanager]
-    Alertmanager -->|Webhook authentifie| AIOps[ai-ops-service]
-    AIOps -->|PromQL en lecture seule| Prom
-    AIOps -. contexte nettoye .-> Ollama[Ollama / Gemma optionnel]
-    AIOps --> Human[Operateur humain]
     CD[CD Kubernetes] --> App
 ```
-
-L'assistant ne possede aucun acces de remediation a Kubernetes, Docker ou
-MySQL. Ses diagnostics et recommandations restent soumis a la validation de
-l'operateur humain.
 
 ## Demarrage local
 
@@ -121,17 +112,6 @@ ensuite immediatement le service :
 docker compose start course-service
 ```
 
-## Assistance AIOps basee sur l'observabilite
-
-Alertmanager envoie les alertes a `ai-ops-service` par un webhook authentifie.
-Le service enrichit chaque incident avec des requetes PromQL placees sur liste
-blanche, puis utilise des regles deterministes ou le modele local Gemma via
-Ollama. Le dashboard AIOps restitue l'analyse a un operateur humain.
-
-Cette assistance est strictement en lecture seule : elle ne peut ni modifier le
-cluster ni declencher de remediation automatique. Les details d'architecture et
-d'evaluation se trouvent dans `aiops-architecture.md` et `aiops-evaluation.md`.
-
 ## Logs et correlation
 
 Chaque reponse contient `X-Request-ID`. Chaque service produit un log JSON avec
@@ -141,7 +121,7 @@ passe, JWT, corps de requete et parametres sensibles ne sont jamais journalises.
 Les logs restent consultables avec :
 
 ```powershell
-docker compose logs -f user-service course-service certificate-service frontend-service ai-ops-service
+docker compose logs -f user-service course-service certificate-service frontend-service
 ```
 
 Loki ou Elasticsearch peut etre ajoute ulterieurement pour leur centralisation,

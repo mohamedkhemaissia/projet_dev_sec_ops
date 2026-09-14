@@ -1,7 +1,7 @@
 # Deroule de demonstration pour la soutenance
 
 Ce scenario tient en environ douze minutes et montre la valeur metier, la
-demarche DevSecOps, l'observabilite et l'assistance AIOps.
+demarche DevSecOps et l'observabilite.
 
 ## Preparation avant l'arrivee du jury
 
@@ -91,14 +91,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-business-scenari
   -FrontendBaseUrl http://traininghub.local
 ```
 
-## 5. Monitoring, observabilite et AIOps - 3 minutes
+## 5. Monitoring et observabilite - 3 minutes
 
 Ouvrir :
 
 - Grafana sur `http://localhost:3001`, dashboard
   `TrainingHub - Observability` ;
 - Prometheus sur `http://localhost:9090/targets`, avec les huit replicas
-  applicatifs et `ai-ops-service` `UP` ;
+  applicatifs `UP` ;
 - Alertmanager sur `http://localhost:9093`.
 
 Expliquer que :
@@ -109,16 +109,10 @@ Expliquer que :
 - les erreurs 5xx valent zero en absence d'erreur ;
 - les alertes couvrent disponibilite, taux 5xx et latence p95.
 
-Montrer enfin le dashboard AIOps : Alertmanager transmet une alerte au service,
-qui enrichit le contexte depuis Prometheus, interroge Ollama/Gemma si ce mode est
-active et restitue une recommandation a l'operateur humain. Preciser que le
-service reste en lecture seule et ne declenche aucune remediation automatique.
-
 ## 6. Conclusion - 1 minute
 
 Le MVP est fonctionnel, teste, conteneurise, securise par des controles Shift
-Left, deployable automatiquement et supervise apres deploiement avec une
-assistance AIOps en lecture seule.
+Left, deployable automatiquement et supervise apres deploiement.
 
 ## Solution de secours
 
@@ -128,7 +122,6 @@ Avant la soutenance, conserver des captures :
 - scenario metier entierement vert ;
 - run GitHub Actions vert ;
 - dashboard Grafana et cibles Prometheus ;
-- dashboard AIOps et exemple d'incident analyse ;
 - certificat PDF genere.
 
 Si Kubernetes n'est pas disponible, lancer `docker compose up -d` et utiliser

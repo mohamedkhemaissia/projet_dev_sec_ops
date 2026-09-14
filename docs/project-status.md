@@ -20,31 +20,14 @@
 | Demonstration | Termine | Portail web et collection Postman testée de bout en bout |
 | Documentation securite | Termine | Politique de securite et threat model STRIDE |
 | Diagrammes | Termine | Architecture, parcours metier et pipeline CI/CD |
-| Assistant AIOps | MVP implemente et evalue | Webhook Alertmanager, Prometheus, Ollama local, garde-fous et deux evaluations CSV |
 
-## Extension AIOps du 5 aout 2026
+## Validation du perimetre reduit du 14 septembre 2026
 
-- nouveau `ai-ops-service` Flask/Gunicorn en lecture seule ;
-- webhook Alertmanager authentifie et teste de bout en bout dans Docker ;
-- trois requetes Prometheus placees sur liste blanche ;
-- nettoyage des secrets, validation des sorties et absence de permissions de
-  remediation ;
-- mode Ollama local optionnel et repli deterministe ;
-- 63 tests Pytest au total et couverture CI de 65,19 % pour un seuil de 55 % ;
-- Flake8, Bandit, Docker Compose et les trois rendus Kustomize valides ;
-- image AIOps non-root validee avec Gunicorn et filesystem en lecture seule ;
-- baseline de trois incidents enregistree dans
-  `docs/evidence/aiops-rules-baseline.csv`.
-- modele local `gemma3:1b` telecharge et trois diagnostics reels generes sans
-  fallback ;
-- evaluation Ollama enregistree dans
-  `docs/evidence/aiops-ollama-evaluation.csv` ;
-- garde-fou ajoute apres observation de deux sous-estimations de severite sur
-  trois sorties brutes du modele.
-
-L'evaluation actuelle valide l'integration et les mecanismes de securite. Elle ne
-prouve pas encore la precision de cause racine, car les alertes sont synthetiques
-et une seule repetition a ete executee par scenario.
+- 53 tests Pytest reussis : 43 pour les API et 10 pour le frontend ;
+- couverture API de 60,51 % pour un seuil CI de 55 % ;
+- Flake8 et Bandit reussis ;
+- Docker Compose valide et limite aux quatre services applicatifs ;
+- rendus Kustomize de base, de production et de monitoring valides.
 
 ## Validations locales du 27 juillet 2026
 
@@ -73,18 +56,16 @@ et une seule repetition a ete executee par scenario.
 
 Ces actions ne demandent plus de developpement :
 
-1. provoquer de vrais incidents controles et executer au moins cinq repetitions ;
-2. faire noter la pertinence des diagnostics AIOps de 1 a 5 ;
-3. creer l'environnement GitHub `production` et ses secrets si un cluster distant
+1. creer l'environnement GitHub `production` et ses secrets si un cluster distant
    doit recevoir le CD ;
-4. executer la collection Postman et conserver une capture des resultats pour la
+2. executer la collection Postman et conserver une capture des resultats pour la
    soutenance ;
-5. exporter les diagrammes Mermaid en PNG ou SVG pour le rapport ;
-6. inserer les captures GitHub Actions, Docker, Kubernetes et Postman dans le
+3. exporter les diagrammes Mermaid en PNG ou SVG pour le rapport ;
+4. inserer les captures GitHub Actions, Docker, Kubernetes et Postman dans le
    memoire ;
-7. capturer le dashboard Grafana, les cibles Prometheus et une alerte ;
-8. preparer une courte demonstration orale fondee sur le portail, le pipeline,
-   l'observabilite et l'assistance AIOps.
+5. capturer le dashboard Grafana, les cibles Prometheus et une alerte ;
+6. preparer une courte demonstration orale fondee sur le portail, le pipeline et
+   l'observabilite.
 
 Le cluster de production et le rapport academique sont des livrables externes au
 code. Le MVP du depot est fonctionnel et demonstrable sans eux avec Docker

@@ -22,7 +22,6 @@ et aux preuves de TrainingHub.
 | Compliance as Code | Partiel | Trivy IaC ; pas de referentiel reglementaire impose |
 | Security training | Documentaire | Politique de securite et consignes de demonstration |
 | Shift Left | Couvert | Hooks locaux et controles CI bloquants |
-| AIOps | Couvert au niveau MVP | Alertmanager, contexte Prometheus, Ollama/Gemma, dashboard humain et absence de remediation automatique |
 
 ## Ce qu'il ne faut pas sur-declarer dans le rapport
 
@@ -43,9 +42,8 @@ nombre de vulnerabilites et temps de remediation.
 
 > TrainingHub automatise les controles de qualite et de securite Shift Left
 > avant publication, puis supervise les services deployes avec Prometheus,
-> Grafana et Alertmanager. Une assistance AIOps en lecture seule qualifie les
-> alertes et fournit un diagnostic a l'operateur humain. Cette chaine reduit le
-> delai de detection et soutient une livraison continue plus fiable.
+> Grafana et Alertmanager. Cette chaine reduit le delai de detection et soutient
+> une livraison continue plus fiable.
 
 ## Elements volontairement hors perimetre
 

@@ -5,7 +5,6 @@ namespace: traininghub
 
 resources:
   - frontend.yaml
-  - ai-ops-service.yaml
   - namespace.yaml
   - app-config.yaml
   - mysql.yaml

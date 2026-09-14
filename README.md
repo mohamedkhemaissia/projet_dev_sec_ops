@@ -68,8 +68,7 @@ Services exposes:
 - Alertmanager: `http://localhost:9093`
 
 Le dashboard `TrainingHub - Observability` est provisionne automatiquement dans
-Grafana. Les services applicatifs et AIOps exposent leurs metriques sur
-`/metrics`.
+Grafana. Les services applicatifs exposent leurs metriques sur `/metrics`.
 
 Si un ancien volume MySQL contient les anciennes tables, reinitialiser le volume:
 
@@ -297,7 +296,6 @@ Images construites:
 - `course-service`
 - `certificate-service`
 - `frontend-service`
-- `ai-ops-service`
 
 La configuration du CD, des secrets GitHub et du rollback est documentee dans
 `docs/deployment/cd-kubernetes.md`.
@@ -306,7 +304,7 @@ La configuration du CD, des secrets GitHub et du rollback est documentee dans
 
 Le projet observe les services apres leur deploiement avec :
 
-- metriques Prometheus sur les services applicatifs et AIOps ;
+- metriques Prometheus sur les services applicatifs ;
 - dashboard Grafana provisionne automatiquement dans Docker Compose et Kubernetes ;
 - alertes de disponibilite, taux d'erreur et latence ;
 - logs JSON correles par `X-Request-ID` ;
@@ -316,26 +314,6 @@ Voir `docs/observability.md` pour le lancement, les requetes PromQL et la
 demonstration d'une alerte.
 Le deploiement Kubernetes du monitoring est documente dans
 `k8s/monitoring/README.md`.
-
-### Assistance AIOps basee sur l'observabilite
-
-TrainingHub inclut un assistant d'analyse d'incidents en lecture seule. Il recoit
-les alertes d'Alertmanager, enrichit le contexte depuis Prometheus et genere un
-diagnostic structure. Le mode `rules` est reproductible sans modele ; le mode
-`ollama` active une analyse LLM locale avec repli automatique.
-L'assistant reste en lecture seule, ne declenche aucune remediation automatique
-et soumet ses recommandations a un operateur humain.
-
-Apres le demarrage Docker Compose, lancer un scenario controle avec :
-
-```powershell
-.\scripts\run-aiops-scenario.ps1
-```
-
-Le contrat, les limites de securite et le protocole d'evaluation sont detailles
-dans [`docs/aiops-architecture.md`](docs/aiops-architecture.md).
-Les premiers resultats comparatifs sont presentes dans
-[`docs/aiops-evaluation.md`](docs/aiops-evaluation.md).
 
 ## Documentation PFE
 
@@ -348,5 +326,3 @@ Les premiers resultats comparatifs sont presentes dans
 - Modele de menaces STRIDE : `docs/security/threat-model.md`
 - Monitoring et observabilite : `docs/observability.md`
 - Matrice de couverture DevSecOps : `docs/devsecops-coverage.md`
-- Assistant AIOps : `docs/aiops-architecture.md`
-- Evaluation AIOps : `docs/aiops-evaluation.md`
