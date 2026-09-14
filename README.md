@@ -1,313 +1,167 @@
 # TrainingHub
 
-Projet PFE DevSecOps basé sur une plateforme web de gestion des formations,
-des inscriptions et des certificats.
+TrainingHub est un PFE DevSecOps de gestion des formations, des inscriptions et
+des certificats. Le périmètre contient quatre services Flask, une base MySQL,
+une chaîne CI/CD, un déploiement Kubernetes et une stack d’observabilité.
 
-Le monorepo contient trois microservices métier Python/Flask, un service de
-présentation web et une base MySQL unique:
+| Service | Rôle | Port local |
+| --- | --- | --- |
+| `frontend-service` | Portail web public, learner et admin | `3000` |
+| `user-service` | Comptes, profils, JWT et rôles | `5001` |
+| `course-service` | Formations et inscriptions | `5002` |
+| `certificate-service` | Émission, PDF et vérification des certificats | `5004` |
+| MySQL | Stockage des données | `3306` |
 
-- `user-service`: inscription, connexion JWT, profils et roles.
-- `course-service`: catalogue de formations et inscriptions.
-- `certificate-service`: emission et verification des certificats.
-- `frontend-service`: portail Jinja2/Bootstrap pour les espaces public, learner
-  et admin.
-- `mysql`: base unique `training_platform_db`.
-
-La démonstration fonctionnelle principale se fait avec le portail web. La
-collection Postman reste disponible pour démontrer et vérifier directement les
-contrats des API.
-
-## Securite applicative
-
-- JWT avec expiration, emetteur, audience et claims obligatoires.
-- Autorisations explicites pour les roles `admin` et `learner`.
-- Validation et normalisation des entrees JSON.
-- Mots de passe de 12 a 128 caracteres avec lettres, chiffre et caractere special.
-- CORS configurable et en-tetes HTTP de securite.
-- Protection contre l'acces aux certificats d'un autre learner.
-
-## Architecture
-
-Tables principales:
-
-- `users`
-- `courses`
-- `enrollments`
-- `certificates`
-
-Roles applicatifs:
-
-- `admin`
-- `learner`
-
-Flux principal:
-
-1. Un utilisateur cree un compte ou se connecte via `user-service`.
-2. `user-service` retourne un JWT.
-3. Le client Postman envoie le JWT dans `Authorization: Bearer JWT_TOKEN`.
-4. `course-service` protege les cours et les inscriptions avec le JWT.
-5. Un admin marque une inscription comme `completed`.
-6. Le learner demande son certificat via `certificate-service`.
-7. Le certificat peut etre verifie publiquement avec son code.
-
-## Lancement Docker Compose
-
-```bash
-docker compose up --build
+```mermaid
+flowchart LR
+    U[Utilisateur] --> F[Frontend]
+    F --> S[User / Course / Certificate services]
+    S --> DB[(MySQL)]
+    S --> P[Prometheus]
+    P --> G[Grafana]
+    P --> A[Alertmanager]
 ```
 
-Services exposes:
+## Lancement avec Docker Compose
 
-- Frontend TrainingHub: `http://localhost:3000`
-- User Service: `http://localhost:5001`
-- Course Service: `http://localhost:5002`
-- Certificate Service: `http://localhost:5004`
-- MySQL: `localhost:3306`
-- Prometheus: `http://localhost:9090`
-- Grafana: `http://localhost:3001`
-- Alertmanager: `http://localhost:9093`
+Prérequis : Docker Desktop avec Docker Compose.
 
-Le dashboard `TrainingHub - Observability` est provisionne automatiquement dans
-Grafana. Les services applicatifs exposent leurs metriques sur `/metrics`.
+Depuis PowerShell, à la racine du dépôt :
 
-Si un ancien volume MySQL contient les anciennes tables, reinitialiser le volume:
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
 
-```bash
+Remplacer au minimum les valeurs de `SECRET_KEY`, `JWT_SECRET_KEY`,
+`MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD` et `DEFAULT_ADMIN_PASSWORD`. Le fichier
+`.env` est ignoré par Git et ne doit jamais être versionné.
+
+```powershell
+docker compose up --build -d
+docker compose ps
+```
+
+Interfaces disponibles :
+
+- application : <http://localhost:3000>
+- Prometheus : <http://localhost:9090>
+- Grafana : <http://localhost:3001>
+- Alertmanager : <http://localhost:9093>
+
+Le compte administrateur utilise `DEFAULT_ADMIN_EMAIL` et
+`DEFAULT_ADMIN_PASSWORD` définis dans `.env`.
+
+Pour arrêter :
+
+```powershell
+docker compose down
+```
+
+Pour supprimer aussi toutes les données locales MySQL et de monitoring :
+
+```powershell
 docker compose down -v
-docker compose up --build
 ```
 
-## Tests automatises
+## Shift Left et CI/CD
+
+Les contrôles sont exécutés tôt dans GitHub Actions, à chaque push sur `main` ou
+`develop` et à chaque pull request vers `main`. Aucun hook Git local ne bloque
+les commits ou les push.
+
+La CI exécute :
+
+1. Gitleaks pour les secrets ;
+2. Flake8, Pytest avec au moins 55 % de couverture et Bandit ;
+3. pip-audit pour les dépendances ;
+4. Kustomize, Kubeconform et Trivy pour Kubernetes ;
+5. le build des quatre images et Docker Scout pour les vulnérabilités ;
+6. la publication des images validées dans GHCR sur `main`.
+
+Le workflow CD est déclenché avec un tag d’image immuable. Il récupère les
+secrets de l’environnement GitHub `production`, déploie sur Kubernetes, attend
+les rollouts, lance les smoke tests et effectue un rollback en cas d’échec.
+
+## Threat model STRIDE
+
+Les actifs principaux sont les comptes, JWT, mots de passe, données de
+formation, inscriptions, certificats et secrets d’infrastructure.
+
+| Menace | Risque principal | Contrôles |
+| --- | --- | --- |
+| Spoofing | Usurpation d’un utilisateur | JWT signé, expiration, issuer, audience et RBAC |
+| Tampering | Modification de données ou d’images | Validation des entrées, images scannées, filesystem en lecture seule |
+| Repudiation | Action impossible à retracer | Logs JSON et corrélation par `X-Request-ID` |
+| Information disclosure | Exposition de secrets ou certificats | GitHub/Kubernetes Secrets, Gitleaks et contrôle d’accès |
+| Denial of service | Saturation des API | Limites de ressources, HPA, health checks et rate limiting Ingress |
+| Elevation of privilege | Accès admin non autorisé | RBAC applicatif, conteneurs non-root, seccomp et capabilities supprimées |
+
+Les frontières de confiance principales sont le navigateur, l’Ingress, les
+services applicatifs, MySQL, GHCR et le cluster Kubernetes. Les NetworkPolicy
+limitent les communications entre ces zones.
+
+## Kubernetes local avec Minikube
+
+Prérequis : Minikube et `kubectl`.
 
 ```powershell
-pip install -r services/user-service/requirements.txt
-pip install -r services/course-service/requirements.txt
-pip install -r services/certificate-service/requirements.txt
-pip install -r services/frontend-service/requirements.txt
-pip install -r requirements-test.txt
-.\.venv\Scripts\python.exe -m pytest tests/ services/frontend-service/tests/ -v
+minikube start --cpus=2 --memory=3072
+minikube addons enable metrics-server
+minikube addons enable ingress
 ```
 
-Ou:
+Construire les images directement dans Minikube :
 
 ```powershell
-.\scripts\run-tests.ps1
+minikube image build -f infra/docker/user-service.Dockerfile -t user-service:pfe-local .
+minikube image build -f infra/docker/course-service.Dockerfile -t course-service:pfe-local .
+minikube image build -f infra/docker/certificate-service.Dockerfile -t certificate-service:pfe-local .
+minikube image build -f infra/docker/frontend-service.Dockerfile -t frontend-service:pfe-local .
 ```
 
-## Controles DevSecOps
+Créer les secrets locaux, remplacer toutes les valeurs `CHANGE_ME`, puis
+déployer l’application et le monitoring :
 
-Les commits et les push ne lancent aucun hook Git local. Les controles Gitleaks,
-Flake8, Pytest, Bandit, pip-audit, Trivy et Docker Scout sont centralises dans
-GitHub Actions et s'executent automatiquement apres un push ou sur une pull
-request.
-
-Les tests restent disponibles manuellement avec `scripts/run-tests.ps1`.
-
-La politique de securite se trouve dans `SECURITY.md` et le threat model STRIDE
-dans `docs/security/threat-model.md`.
-
-## Scenario Postman
-
-Une collection directement importable et auto-verifiee est disponible dans
-`postman/TrainingHub.postman_collection.json`. Son guide d'utilisation se trouve
-dans `postman/README.md`.
-
-### 1. Health checks
-
-```bash
-curl http://localhost:5001/api/v1/users/health
-curl http://localhost:5002/api/v1/courses/health
-curl http://localhost:5004/api/v1/certificates/health
+```powershell
+Copy-Item k8s/secret.example.yaml k8s/secret.yaml
+notepad k8s/secret.yaml
+kubectl apply -f k8s/secret.yaml
+kubectl apply -k k8s
+kubectl apply -k k8s/monitoring
+kubectl get pods -n traininghub
+kubectl get pods -n monitoring
 ```
 
-### 2. Creer un learner
+Accès simple au portail sans configurer l’Ingress :
 
-```bash
-curl -X POST http://localhost:5001/api/v1/users/register ^
-  -H "Content-Type: application/json" ^
-  -d "{\"name\":\"Alice Demo\",\"email\":\"alice@example.com\",\"password\":\"Password123!\"}"
+```powershell
+kubectl port-forward -n traininghub service/frontend-service 3000:3000
 ```
 
-### 3. Se connecter
+## Observabilité
 
-```bash
-curl -X POST http://localhost:5001/api/v1/users/login ^
-  -H "Content-Type: application/json" ^
-  -d "{\"email\":\"alice@example.com\",\"password\":\"Password123!\"}"
+Chaque service expose `/health` et `/metrics`. Prometheus collecte les métriques
+de disponibilité, débit, erreurs et latence. Grafana fournit le dashboard
+`TrainingHub - Observability`; Alertmanager reçoit les alertes de service
+indisponible, taux d’erreurs élevé et latence excessive.
+
+Dans Kubernetes, ouvrir les interfaces avec :
+
+```powershell
+kubectl port-forward -n monitoring service/grafana 3001:3000
+kubectl port-forward -n monitoring service/prometheus 9090:9090
+kubectl port-forward -n monitoring service/alertmanager 9093:9093
 ```
 
-### 4. Se connecter admin
+Les logs applicatifs sont structurés en JSON et utilisent `X-Request-ID` pour
+suivre une requête entre les composants.
 
-Compte admin cree automatiquement au demarrage:
+## Structure utile
 
-```txt
-email: admin@training.com
-password: <DEFAULT_ADMIN_PASSWORD>
-```
-
-Ou les valeurs definies dans `.env`.
-
-### 5. Creer une formation
-
-Cette route demande un token `admin`.
-
-```bash
-curl -X POST http://localhost:5002/api/v1/courses ^
-  -H "Content-Type: application/json" ^
-  -H "Authorization: Bearer ADMIN_JWT_TOKEN" ^
-  -d "{\"title\":\"DevSecOps Fundamentals\",\"description\":\"Introduction to secure delivery pipelines\",\"duration\":24,\"level\":\"beginner\",\"category\":\"DevSecOps\"}"
-```
-
-### 6. Lister les formations
-
-```bash
-curl -X GET http://localhost:5002/api/v1/courses ^
-  -H "Authorization: Bearer LEARNER_JWT_TOKEN"
-```
-
-### 7. S'inscrire a une formation
-
-```bash
-curl -X POST http://localhost:5002/api/v1/courses/1/enroll ^
-  -H "Authorization: Bearer LEARNER_JWT_TOKEN"
-```
-
-### 8. Voir les inscriptions du cours
-
-Cette route demande un token `admin`.
-
-```bash
-curl -X GET http://localhost:5002/api/v1/courses/1/enrollments ^
-  -H "Authorization: Bearer ADMIN_JWT_TOKEN"
-```
-
-Recuperer l'`id` de l'inscription dans la reponse.
-
-### 9. Marquer l'inscription comme terminee
-
-Cette route demande un token `admin`.
-
-```bash
-curl -X PUT http://localhost:5002/api/v1/courses/enrollments/1/status ^
-  -H "Content-Type: application/json" ^
-  -H "Authorization: Bearer ADMIN_JWT_TOKEN" ^
-  -d "{\"status\":\"completed\"}"
-```
-
-### 10. Generer un certificat
-
-Cette route demande un token `learner`.
-
-```bash
-curl -X POST http://localhost:5004/api/v1/certificates/courses/1/issue ^
-  -H "Authorization: Bearer LEARNER_JWT_TOKEN"
-```
-
-### 11. Lister mes certificats
-
-```bash
-curl -X GET http://localhost:5004/api/v1/certificates/me ^
-  -H "Authorization: Bearer LEARNER_JWT_TOKEN"
-```
-
-### 12. Verifier un certificat publiquement
-
-```bash
-curl -X GET http://localhost:5004/api/v1/certificates/verify/TH-CODE_ICI
-```
-
-### 13. Telecharger un certificat PDF
-
-Cette route demande le token du learner proprietaire du certificat ou un token admin.
-
-```bash
-curl -X GET http://localhost:5004/api/v1/certificates/1/download ^
-  -H "Authorization: Bearer LEARNER_JWT_TOKEN" ^
-  -o certificat.pdf
-```
-
-## Endpoints principaux
-
-User Service:
-
-- `GET /api/v1/users/health`
-- `POST /api/v1/users/register`
-- `POST /api/v1/users/login`
-- `GET /api/v1/users/me`
-- `PUT /api/v1/users/me`
-- `GET /api/v1/users/`
-- `GET /api/v1/users/<id>`
-- `PUT /api/v1/users/<id>`
-- `DELETE /api/v1/users/<id>`
-
-Course Service:
-
-- `GET /api/v1/courses/health`
-- `GET /api/v1/courses`
-- `GET /api/v1/courses/<id>`
-- `POST /api/v1/courses`
-- `PUT /api/v1/courses/<id>`
-- `DELETE /api/v1/courses/<id>`
-- `POST /api/v1/courses/<id>/enroll`
-- `DELETE /api/v1/courses/<id>/enroll`
-- `GET /api/v1/courses/enrollments/me`
-- `GET /api/v1/courses/<id>/enrollments`
-- `PUT /api/v1/courses/enrollments/<id>/status`
-
-Certificate Service:
-
-- `GET /api/v1/certificates/health`
-- `POST /api/v1/certificates/courses/<course_id>/issue`
-- `GET /api/v1/certificates/me`
-- `GET /api/v1/certificates/<id>`
-- `GET /api/v1/certificates/<id>/download`
-- `GET /api/v1/certificates/verify/<code>`
-
-## Pipeline CI/CD
-
-A chaque push sur `main` ou `develop`, GitHub Actions execute:
-
-1. Gitleaks + Flake8 + Pytest (couverture minimale de 55 %) + Bandit + pip-audit
-2. Tests du service frontend, de ses pages et de ses contrôles d'accès
-3. Rendu Kustomize et scan de securite IaC avec Trivy
-4. Build Docker + scan Docker Scout des vulnerabilites critiques et hautes corrigibles
-5. Push des images vers ghcr.io sur `main`
-6. Deploiement Kubernetes apres validation de l'environnement `production`
-7. Verification des rollouts et smoke tests des services deployes
-
-Images construites:
-
-- `user-service`
-- `course-service`
-- `certificate-service`
-- `frontend-service`
-
-La configuration du CD, des secrets GitHub et du rollback est documentee dans
-`docs/deployment/cd-kubernetes.md`.
-
-## Monitoring et observabilite
-
-Le projet observe les services apres leur deploiement avec :
-
-- metriques Prometheus sur les services applicatifs ;
-- dashboard Grafana provisionne automatiquement dans Docker Compose et Kubernetes ;
-- alertes de disponibilite, taux d'erreur et latence ;
-- logs JSON correles par `X-Request-ID` ;
-- health checks Kubernetes, smoke tests et rollback.
-
-Voir `docs/observability.md` pour le lancement, les requetes PromQL et la
-demonstration d'une alerte.
-Le deploiement Kubernetes du monitoring est documente dans
-`k8s/monitoring/README.md`.
-
-## Documentation PFE
-
-- Etat final et actions de soutenance : `docs/project-status.md`
-- Deroule de demonstration : `docs/demo-soutenance.md`
-- Architecture technique : `docs/diagrams/architecture.md`
-- Architecture du portail web : `docs/frontend-architecture.md`
-- Parcours metier : `docs/diagrams/business-flow.md`
-- Pipeline DevSecOps : `docs/diagrams/ci-cd-pipeline.md`
-- Modele de menaces STRIDE : `docs/security/threat-model.md`
-- Monitoring et observabilite : `docs/observability.md`
-- Matrice de couverture DevSecOps : `docs/devsecops-coverage.md`
+- `services/` : les quatre services Flask ;
+- `infra/` : Dockerfiles, MySQL et configuration de monitoring ;
+- `k8s/` : manifests, Kustomize, HPA, Ingress et NetworkPolicy ;
+- `.github/workflows/` : pipelines CI et CD ;
+- `tests/` : tests automatisés des API ;
+- `postman/` : collection de démonstration des API.
