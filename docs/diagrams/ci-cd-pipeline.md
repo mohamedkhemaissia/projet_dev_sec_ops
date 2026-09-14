@@ -13,7 +13,7 @@ flowchart LR
         SAST[Bandit]
         SCA[pip-audit]
         IaC[Trivy IaC]
-        Build[Build des 5 images]
+        Build[Build des 4 images]
         Scan[Docker Scout]
 
         Secrets --> Lint --> Tests --> SAST --> SCA --> IaC --> Build --> Scan

@@ -147,16 +147,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build user-service
-        run: docker build -f infra/docker/user-service.Dockerfile -t user-service:latest .
+        run: docker build --pull -f infra/docker/user-service.Dockerfile -t user-service:latest .
 
       - name: Build course-service
-        run: docker build -f infra/docker/course-service.Dockerfile -t course-service:latest .
+        run: docker build --pull -f infra/docker/course-service.Dockerfile -t course-service:latest .
 
       - name: Build certificate-service
-        run: docker build -f infra/docker/certificate-service.Dockerfile -t certificate-service:latest .
+        run: docker build --pull -f infra/docker/certificate-service.Dockerfile -t certificate-service:latest .
 
       - name: Build frontend-service
-        run: docker build -f infra/docker/frontend-service.Dockerfile -t frontend-service:latest .
+        run: docker build --pull -f infra/docker/frontend-service.Dockerfile -t frontend-service:latest .
 
       - name: Login to Docker Hub for Docker Scout
         uses: docker/login-action@v4
@@ -229,7 +229,7 @@ jobs:
 
       - name: Build and push user-service
         run: |
-          docker build -f infra/docker/user-service.Dockerfile \
+          docker build --pull -f infra/docker/user-service.Dockerfile \
             -t ${{ env.IMAGE_PREFIX }}/user-service:${{ github.run_number }} \
             -t ${{ env.IMAGE_PREFIX }}/user-service:latest .
           docker push ${{ env.IMAGE_PREFIX }}/user-service:${{ github.run_number }}
@@ -237,7 +237,7 @@ jobs:
 
       - name: Build and push course-service
         run: |
-          docker build -f infra/docker/course-service.Dockerfile \
+          docker build --pull -f infra/docker/course-service.Dockerfile \
             -t ${{ env.IMAGE_PREFIX }}/course-service:${{ github.run_number }} \
             -t ${{ env.IMAGE_PREFIX }}/course-service:latest .
           docker push ${{ env.IMAGE_PREFIX }}/course-service:${{ github.run_number }}
@@ -245,7 +245,7 @@ jobs:
 
       - name: Build and push certificate-service
         run: |
-          docker build -f infra/docker/certificate-service.Dockerfile \
+          docker build --pull -f infra/docker/certificate-service.Dockerfile \
             -t ${{ env.IMAGE_PREFIX }}/certificate-service:${{ github.run_number }} \
             -t ${{ env.IMAGE_PREFIX }}/certificate-service:latest .
           docker push ${{ env.IMAGE_PREFIX }}/certificate-service:${{ github.run_number }}
@@ -253,7 +253,7 @@ jobs:
 
       - name: Build and push frontend-service
         run: |
-          docker build -f infra/docker/frontend-service.Dockerfile \
+          docker build --pull -f infra/docker/frontend-service.Dockerfile \
             -t ${{ env.IMAGE_PREFIX }}/frontend-service:${{ github.run_number }} \
             -t ${{ env.IMAGE_PREFIX }}/frontend-service:latest .
           docker push ${{ env.IMAGE_PREFIX }}/frontend-service:${{ github.run_number }}
