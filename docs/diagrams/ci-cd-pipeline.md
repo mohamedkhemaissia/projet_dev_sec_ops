@@ -3,8 +3,7 @@
 ```mermaid
 flowchart LR
     Dev[Developpeur] --> Commit[Commit / Push]
-    Commit --> Hooks[Pre-commit<br/>YAML, Flake8, Bandit, Gitleaks]
-    Hooks --> GitHub[Depot GitHub]
+    Commit --> GitHub[Depot GitHub]
 
     subgraph CI[Integration continue]
         Secrets[Gitleaks]

@@ -31,8 +31,8 @@ Chaque changement doit respecter les controles suivants avant integration :
 5. analyse des images avec Docker Scout ;
 6. revue des autorisations, des entrees utilisateur et des donnees sensibles.
 
-Les controles locaux `pre-commit` donnent un retour rapide au developpeur. La CI
-GitHub Actions reste la source de verite et ne doit jamais etre contournee.
+Les controles automatises sont centralises dans GitHub Actions. La CI reste la
+source de verite et ne doit jamais etre contournee.
 
 ## Gestion des secrets
 

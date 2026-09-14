@@ -94,29 +94,14 @@ Ou:
 .\scripts\run-tests.ps1
 ```
 
-## Controles Shift Left locaux
+## Controles DevSecOps
 
-Installer les dependances de test et les hooks Git une seule fois :
+Les commits et les push ne lancent aucun hook Git local. Les controles Gitleaks,
+Flake8, Pytest, Bandit, pip-audit, Trivy et Docker Scout sont centralises dans
+GitHub Actions et s'executent automatiquement apres un push ou sur une pull
+request.
 
-```powershell
-winget install --id Gitleaks.Gitleaks --exact
-pip install -r requirements-test.txt
-pre-commit install
-```
-
-Ouvrir un nouveau terminal apres l'installation de Gitleaks afin que la commande
-soit disponible dans le `PATH`.
-
-Les controles de format, YAML, Flake8, Bandit et Gitleaks sont executes avant
-chaque commit. La suite Pytest avec son seuil de couverture est executee avant
-chaque push.
-
-Pour verifier tout le depot manuellement :
-
-```powershell
-pre-commit run --all-files
-pre-commit run --all-files --hook-stage pre-push
-```
+Les tests restent disponibles manuellement avec `scripts/run-tests.ps1`.
 
 La politique de securite se trouve dans `SECURITY.md` et le threat model STRIDE
 dans `docs/security/threat-model.md`.

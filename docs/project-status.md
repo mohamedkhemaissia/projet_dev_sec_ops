@@ -10,7 +10,7 @@
 | Certificats | Termine | Emission, verification publique et PDF |
 | Conteneurisation | Termine | Dockerfiles durcis et Docker Compose valide |
 | Kubernetes | Termine | Deployments, Services, Ingress, HPA, ConfigMap, Secret local et PVC |
-| Shift Left | Termine | Hooks pre-commit et pre-push |
+| Shift Left | Termine | Controles automatiques GitHub Actions sur les push et pull requests |
 | CI DevSecOps | Termine | Gitleaks, Flake8, Pytest, Bandit, pip-audit et Docker Scout |
 | Securite IaC | Termine | Rendu Kustomize de production et scan Trivy bloquant |
 | Publication | Termine | Images versionnees dans GHCR sur `main` |

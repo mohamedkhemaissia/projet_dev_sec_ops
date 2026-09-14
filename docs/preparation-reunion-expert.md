@@ -634,21 +634,14 @@ Shift Left signifie déplacer les contrôles le plus tôt possible, vers la gauc
 du cycle. Trouver un secret ou une vulnérabilité avant le déploiement coûte
 moins cher que la découvrir en production.
 
-### 8.2 Contrôles locaux
+### 8.2 Contrôles automatisés
 
-Le fichier .pre-commit-config.yaml met en place :
+Le projet ne dépend pas de hooks Git locaux. Les commits et les push restent
+simples, tandis que GitHub Actions exécute automatiquement Gitleaks, Flake8,
+Pytest avec couverture, Bandit, pip-audit, Trivy et Docker Scout.
 
-- contrôle des gros fichiers ;
-- validation JSON et YAML ;
-- détection des marqueurs de conflit Git ;
-- nettoyage des espaces et fins de fichiers ;
-- Flake8 pour la qualité Python ;
-- Gitleaks pour les secrets ;
-- Bandit pour la sécurité du code Python ;
-- Pytest avec couverture au moment du pre-push.
-
-Les hooks donnent un retour rapide au développeur. La CI reste la source de
-vérité, car un hook local peut être absent ou contourné.
+La CI constitue ainsi une source de vérité identique pour tous les développeurs
+et ne dépend pas de la configuration de leur poste.
 
 ### 8.3 Pipeline d’intégration continue
 
