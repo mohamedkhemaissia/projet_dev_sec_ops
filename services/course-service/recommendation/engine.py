@@ -93,9 +93,9 @@ def _cold_start_recommendations(courses, limit, maximum_enrollment_count):
             int(course.get("enrollment_count", 0)),
             maximum_enrollment_count,
         )
-        reasons = ["classement de démarrage selon les inscriptions"]
-        if course.get("level") == "beginner":
-            reasons.append("niveau débutant privilégié en cas d’égalité")
+        reasons = [
+            "Recommandation de démarrage classée selon la popularité, le niveau et la récence"
+        ]
         recommendations.append(_recommendation_payload(course, popularity, reasons))
     return recommendations
 
@@ -141,7 +141,9 @@ def build_recommendations(courses, history, limit=5, now=None):
 
         course_level = LEVEL_ORDER.get(course.get("level"))
         next_level = any(
-            course_level is not None
+            enrollment.get("status") == "completed"
+            and enrollment.get("category") == course.get("category")
+            and course_level is not None
             and LEVEL_ORDER.get(enrollment.get("level")) is not None
             and course_level == LEVEL_ORDER[enrollment["level"]] + 1
             for enrollment in category_history
