@@ -13,12 +13,15 @@ from db.connection import (
     get_enrollment,
     get_enrollments_by_course,
     get_enrollments_by_user,
+    get_recommendation_data,
     update_course as db_update_course,
     update_enrollment_status,
 )
+from recommendation.engine import build_recommendations
 
 courses_bp = Blueprint("courses", __name__, url_prefix="/api/v1/courses")
 ALLOWED_LEVELS = {"beginner", "intermediate", "advanced"}
+ALLOWED_SORTS = {"popular", "recent", "completion_rate"}
 ALLOWED_ENROLLMENT_STATUS = {"enrolled", "in_progress", "completed"}
 ALLOWED_ROLES = {"learner", "admin"}
 JWT_REQUIRED_CLAIMS = ["exp", "iat", "iss", "aud", "user_id", "email", "role"]
@@ -147,6 +150,54 @@ def learner_required(fn):
     return wrapper
 
 
+def parse_course_filters():
+    sort = request.args.get("sort")
+    if sort is not None and sort not in ALLOWED_SORTS:
+        return None, json_error(400, "bad_request", "Invalid sort")
+
+    category = request.args.get("category")
+    if category is not None:
+        category = category.strip()
+        if not 1 <= len(category) <= 100:
+            return None, json_error(
+                400,
+                "bad_request",
+                "category must contain between 1 and 100 characters",
+            )
+
+    level = request.args.get("level")
+    if level is not None and level not in ALLOWED_LEVELS:
+        return None, json_error(400, "bad_request", "Invalid level")
+
+    return {"sort": sort, "category": category, "level": level}, None
+
+
+def parse_recommendation_limit():
+    raw_limit = request.args.get("limit", "5")
+    if not raw_limit.isdigit():
+        return None, json_error(
+            400,
+            "bad_request",
+            "limit must be an integer between 1 and 10",
+        )
+
+    try:
+        limit = int(raw_limit)
+    except ValueError:
+        return None, json_error(
+            400,
+            "bad_request",
+            "limit must be an integer between 1 and 10",
+        )
+    if not 1 <= limit <= 10:
+        return None, json_error(
+            400,
+            "bad_request",
+            "limit must be an integer between 1 and 10",
+        )
+    return limit, None
+
+
 @courses_bp.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok", "service": current_app.config["SERVICE_NAME"]}), 200
@@ -155,7 +206,30 @@ def health():
 @courses_bp.route("", methods=["GET"])
 @jwt_required
 def get_courses():
-    return jsonify(get_all_courses()), 200
+    filters, error_response = parse_course_filters()
+    if error_response:
+        return error_response
+    return jsonify(get_all_courses(**filters)), 200
+
+
+@courses_bp.route("/recommendations", methods=["GET"])
+@learner_required
+def get_recommendations():
+    limit, error_response = parse_recommendation_limit()
+    if error_response:
+        return error_response
+
+    user_id = g.current_user["user_id"]
+    courses, history = get_recommendation_data(user_id)
+    cold_start, recommendations = build_recommendations(courses, history, limit=limit)
+    return jsonify(
+        {
+            "user_id": user_id,
+            "algorithm": "rule-based-scoring",
+            "cold_start": cold_start,
+            "recommendations": recommendations,
+        }
+    ), 200
 
 
 @courses_bp.route("/<int:course_id>", methods=["GET"])
