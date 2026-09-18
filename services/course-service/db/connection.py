@@ -10,6 +10,34 @@ MYSQL_USER = os.getenv("MYSQL_USER", "tms_user")
 MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD")
 MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "training_platform_db")
 
+COURSE_SORT_EXPRESSIONS = {
+    None: "c.id ASC",
+    "popular": "enrollment_count DESC, c.id ASC",
+    "recent": "c.created_at DESC, c.id ASC",
+    "completion_rate": "completion_rate DESC, c.id ASC",
+}
+
+COURSE_STATS_SELECT = """
+    SELECT c.*,
+           COUNT(e.id) AS enrollment_count,
+           COALESCE(SUM(CASE WHEN e.status = 'in_progress' THEN 1 ELSE 0 END), 0)
+               AS in_progress_count,
+           COALESCE(SUM(CASE WHEN e.status = 'completed' THEN 1 ELSE 0 END), 0)
+               AS completed_count,
+           CASE
+               WHEN COUNT(e.id) = 0 THEN 0
+               ELSE 100.0 * SUM(CASE WHEN e.status = 'completed' THEN 1 ELSE 0 END)
+                    / COUNT(e.id)
+           END AS completion_rate
+    FROM courses c
+    LEFT JOIN enrollments e ON e.course_id = c.id
+"""
+
+COURSE_GROUP_BY = """
+    GROUP BY c.id, c.title, c.description, c.duration, c.level,
+             c.category, c.created_at
+"""
+
 
 def get_connection():
     last_error = None
@@ -30,14 +58,41 @@ def get_connection():
 
 
 def row_to_course(row):
-    return row if row is not None else None
+    if row is None:
+        return None
+
+    normalized = dict(row)
+    for field in ("enrollment_count", "in_progress_count", "completed_count"):
+        if field in normalized and normalized[field] is not None:
+            normalized[field] = int(normalized[field])
+    if "completion_rate" in normalized and normalized["completion_rate"] is not None:
+        normalized["completion_rate"] = float(normalized["completion_rate"])
+    return normalized
 
 
-def get_all_courses():
+def get_all_courses(sort=None, category=None, level=None):
+    sort_expression = COURSE_SORT_EXPRESSIONS.get(sort)
+    if sort_expression is None:
+        raise ValueError("Unsupported course sort")
+
+    conditions = []
+    parameters = []
+    if category is not None:
+        conditions.append("c.category = %s")
+        parameters.append(category)
+    if level is not None:
+        conditions.append("c.level = %s")
+        parameters.append(level)
+
     connection = get_connection()
     try:
         cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM courses ORDER BY id ASC")
+        query = COURSE_STATS_SELECT
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+        query += COURSE_GROUP_BY
+        query += f" ORDER BY {sort_expression}"
+        cursor.execute(query, tuple(parameters))
         rows = cursor.fetchall()
         return [row_to_course(row) for row in rows]
     finally:
@@ -48,9 +103,47 @@ def get_course_by_id(course_id):
     connection = get_connection()
     try:
         cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM courses WHERE id = %s", (course_id,))
+        cursor.execute(
+            COURSE_STATS_SELECT + " WHERE c.id = %s" + COURSE_GROUP_BY,
+            (course_id,),
+        )
         row = cursor.fetchone()
         return row_to_course(row)
+    finally:
+        connection.close()
+
+
+def get_recommendation_data(user_id):
+    connection = get_connection()
+    try:
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute(
+            COURSE_STATS_SELECT
+            + """
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM enrollments learner_enrollment
+                WHERE learner_enrollment.user_id = %s
+                  AND learner_enrollment.course_id = c.id
+            )
+            """
+            + COURSE_GROUP_BY,
+            (user_id,),
+        )
+        candidates = [row_to_course(row) for row in cursor.fetchall()]
+
+        cursor.execute(
+            """
+            SELECT e.course_id, e.status, c.category, c.level
+            FROM enrollments e
+            JOIN courses c ON c.id = e.course_id
+            WHERE e.user_id = %s
+            ORDER BY e.course_id ASC
+            """,
+            (user_id,),
+        )
+        history = cursor.fetchall()
+        return candidates, history
     finally:
         connection.close()
 
