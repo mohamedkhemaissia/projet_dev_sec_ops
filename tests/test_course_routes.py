@@ -13,7 +13,6 @@ sys.path.insert(0, str(COURSE_SERVICE_PATH))
 
 from app import create_app  # noqa: E402
 from config import Config  # noqa: E402
-from recommendation.engine import build_recommendations  # noqa: E402
 
 
 @pytest.fixture
@@ -126,125 +125,6 @@ def test_course_detail_contains_enrollment_statistics(mock_find_course, client):
     assert response.status_code == 200
     assert response.get_json()["completion_rate"] == 50.0
     assert response.get_json()["enrollment_count"] == 24
-
-
-@patch("routes.courses.get_recommendation_data")
-def test_recommendations_use_user_id_from_jwt(mock_get_recommendation_data, client):
-    now = datetime.now(tz=timezone.utc)
-    mock_get_recommendation_data.return_value = (
-        [
-            _sample_course(
-                id=2,
-                title="Python Intermediate",
-                category="Python",
-                level="intermediate",
-                enrollment_count=10,
-                created_at=now,
-            )
-        ],
-        [
-            {
-                "course_id": 1,
-                "status": "completed",
-                "category": "Python",
-                "level": "beginner",
-            }
-        ],
-    )
-
-    response = client.get(
-        "/api/v1/courses/recommendations?limit=1",
-        headers=_auth_headers(user_id=4),
-    )
-
-    assert response.status_code == 200
-    body = response.get_json()
-    assert body["user_id"] == 4
-    assert body["algorithm"] == "rule-based-scoring"
-    assert body["cold_start"] is False
-    assert body["recommendations"][0]["course_id"] == 2
-    assert "formation terminée" in body["recommendations"][0]["reason"]
-    mock_get_recommendation_data.assert_called_once_with(4)
-
-
-@patch("routes.courses.get_recommendation_data")
-def test_recommendations_reject_invalid_limit(mock_get_recommendation_data, client):
-    response = client.get(
-        "/api/v1/courses/recommendations?limit=11",
-        headers=_auth_headers(),
-    )
-
-    assert response.status_code == 400
-    mock_get_recommendation_data.assert_not_called()
-
-
-@patch("routes.courses.get_recommendation_data")
-def test_recommendations_require_learner(mock_get_recommendation_data, client):
-    response = client.get(
-        "/api/v1/courses/recommendations",
-        headers=_auth_headers(role="admin"),
-    )
-
-    assert response.status_code == 403
-    mock_get_recommendation_data.assert_not_called()
-
-
-@patch("routes.courses.get_recommendation_data")
-def test_recommendations_require_token(mock_get_recommendation_data, client):
-    response = client.get("/api/v1/courses/recommendations")
-
-    assert response.status_code == 401
-    mock_get_recommendation_data.assert_not_called()
-
-
-def test_recommendation_engine_uses_highest_category_bonus():
-    now = datetime.now(tz=timezone.utc)
-    cold_start, recommendations = build_recommendations(
-        [
-            _sample_course(
-                id=2,
-                category="Python",
-                level="intermediate",
-                enrollment_count=10,
-                created_at=now - timedelta(days=10),
-            )
-        ],
-        [
-            {
-                "course_id": 1,
-                "status": "completed",
-                "category": "Python",
-                "level": "beginner",
-            },
-            {
-                "course_id": 3,
-                "status": "in_progress",
-                "category": "Python",
-                "level": "beginner",
-            },
-        ],
-        limit=1,
-        now=now,
-    )
-
-    assert cold_start is False
-    assert recommendations[0]["score"] == 95
-    assert "formation terminée" in recommendations[0]["reason"]
-    assert "formation en cours" not in recommendations[0]["reason"]
-
-
-def test_recommendation_engine_cold_start_order_is_deterministic():
-    now = datetime.now(tz=timezone.utc)
-    courses = [
-        _sample_course(id=3, enrollment_count=5, level="intermediate", created_at=now),
-        _sample_course(id=2, enrollment_count=5, level="beginner", created_at=now),
-        _sample_course(id=1, enrollment_count=5, level="beginner", created_at=now),
-    ]
-
-    cold_start, recommendations = build_recommendations(courses, [], limit=3, now=now)
-
-    assert cold_start is True
-    assert [item["course_id"] for item in recommendations] == [1, 2, 3]
 
 
 def test_list_courses_without_token(client):

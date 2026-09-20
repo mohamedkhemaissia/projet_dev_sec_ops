@@ -13,11 +13,9 @@ from db.connection import (
     get_enrollment,
     get_enrollments_by_course,
     get_enrollments_by_user,
-    get_recommendation_data,
     update_course as db_update_course,
     update_enrollment_status,
 )
-from recommendation.engine import build_recommendations
 
 courses_bp = Blueprint("courses", __name__, url_prefix="/api/v1/courses")
 ALLOWED_LEVELS = {"beginner", "intermediate", "advanced"}
@@ -172,32 +170,6 @@ def parse_course_filters():
     return {"sort": sort, "category": category, "level": level}, None
 
 
-def parse_recommendation_limit():
-    raw_limit = request.args.get("limit", "5")
-    if not raw_limit.isdigit():
-        return None, json_error(
-            400,
-            "bad_request",
-            "limit must be an integer between 1 and 10",
-        )
-
-    try:
-        limit = int(raw_limit)
-    except ValueError:
-        return None, json_error(
-            400,
-            "bad_request",
-            "limit must be an integer between 1 and 10",
-        )
-    if not 1 <= limit <= 10:
-        return None, json_error(
-            400,
-            "bad_request",
-            "limit must be an integer between 1 and 10",
-        )
-    return limit, None
-
-
 @courses_bp.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok", "service": current_app.config["SERVICE_NAME"]}), 200
@@ -210,26 +182,6 @@ def get_courses():
     if error_response:
         return error_response
     return jsonify(get_all_courses(**filters)), 200
-
-
-@courses_bp.route("/recommendations", methods=["GET"])
-@learner_required
-def get_recommendations():
-    limit, error_response = parse_recommendation_limit()
-    if error_response:
-        return error_response
-
-    user_id = g.current_user["user_id"]
-    courses, history = get_recommendation_data(user_id)
-    cold_start, recommendations = build_recommendations(courses, history, limit=limit)
-    return jsonify(
-        {
-            "user_id": user_id,
-            "algorithm": "rule-based-scoring",
-            "cold_start": cold_start,
-            "recommendations": recommendations,
-        }
-    ), 200
 
 
 @courses_bp.route("/<int:course_id>", methods=["GET"])

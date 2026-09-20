@@ -38,31 +38,6 @@ COURSE_GROUP_BY = """
              c.category, c.created_at
 """
 
-COURSE_RECOMMENDATION_QUERY = """
-    SELECT c.*,
-           COUNT(e.id) AS enrollment_count,
-           COALESCE(SUM(CASE WHEN e.status = 'in_progress' THEN 1 ELSE 0 END), 0)
-               AS in_progress_count,
-           COALESCE(SUM(CASE WHEN e.status = 'completed' THEN 1 ELSE 0 END), 0)
-               AS completed_count,
-           CASE
-               WHEN COUNT(e.id) = 0 THEN 0
-               ELSE 100.0 * SUM(CASE WHEN e.status = 'completed' THEN 1 ELSE 0 END)
-                    / COUNT(e.id)
-           END AS completion_rate
-    FROM courses c
-    LEFT JOIN enrollments e ON e.course_id = c.id
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM enrollments learner_enrollment
-        WHERE learner_enrollment.user_id = %s
-          AND learner_enrollment.course_id = c.id
-    )
-    GROUP BY c.id, c.title, c.description, c.duration, c.level,
-             c.category, c.created_at
-"""
-
-
 def get_connection():
     last_error = None
     for _ in range(30):
@@ -133,32 +108,6 @@ def get_course_by_id(course_id):
         )
         row = cursor.fetchone()
         return row_to_course(row)
-    finally:
-        connection.close()
-
-
-def get_recommendation_data(user_id):
-    connection = get_connection()
-    try:
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute(
-            COURSE_RECOMMENDATION_QUERY,
-            (user_id,),
-        )
-        candidates = [row_to_course(row) for row in cursor.fetchall()]
-
-        cursor.execute(
-            """
-            SELECT e.course_id, e.status, c.category, c.level
-            FROM enrollments e
-            JOIN courses c ON c.id = e.course_id
-            WHERE e.user_id = %s
-            ORDER BY e.course_id ASC
-            """,
-            (user_id,),
-        )
-        history = cursor.fetchall()
-        return candidates, history
     finally:
         connection.close()
 
