@@ -14,8 +14,13 @@ permissions:
   packages: write
 
 jobs:
+
+  # ============================================================
+  # 1. QUALITY & APPLICATION SECURITY
+  # ============================================================
   quality:
     runs-on: ubuntu-latest
+
     env:
       SECRET_KEY: test-only-key
       JWT_SECRET_KEY: test-only-jwt-key
@@ -50,7 +55,10 @@ jobs:
           pip install -r requirements-test.txt
 
       - name: Flake8 check
-        run: flake8 services tests --max-line-length=120 --extend-ignore=E501,W503
+        run: |
+          flake8 services tests \
+            --max-line-length=120 \
+            --extend-ignore=E501,W503
 
       - name: Pytest with coverage threshold
         run: |
@@ -59,6 +67,7 @@ jobs:
             --cov-report=term-missing \
             --cov-report=xml \
             --cov-fail-under=55
+
           python -m pytest services/frontend-service/tests -v
 
       - name: Upload coverage evidence
@@ -70,7 +79,9 @@ jobs:
           if-no-files-found: error
 
       - name: Bandit check
-        run: bandit -r services -x services/frontend-service/tests
+        run: |
+          bandit -r services \
+            -x services/frontend-service/tests
 
       - name: pip-audit dependency scan
         uses: pypa/gh-action-pip-audit@v1.1.0
@@ -81,6 +92,10 @@ jobs:
             services/certificate-service/requirements.txt
             services/frontend-service/requirements.txt
 
+
+  # ============================================================
+  # 2. INFRASTRUCTURE SECURITY
+  # ============================================================
   infrastructure-security:
     runs-on: ubuntu-latest
 
@@ -96,9 +111,11 @@ jobs:
       - name: Render production and monitoring manifests
         run: |
           mkdir -p rendered
+
           kubectl kustomize k8s/overlays/production \
             --load-restrictor=LoadRestrictionsNone \
             > rendered/traininghub-production.yaml
+
           kubectl kustomize k8s/monitoring \
             > rendered/traininghub-monitoring.yaml
 
@@ -114,15 +131,20 @@ jobs:
 
       - name: Validate monitoring configuration
         run: |
-          docker run --rm --entrypoint promtool \
+          docker run --rm \
+            --entrypoint promtool \
             -v "${PWD}/infra/monitoring/prometheus:/etc/prometheus:ro" \
             prom/prometheus:v3.5.0 \
             check config /etc/prometheus/prometheus.yml
-          docker run --rm --entrypoint promtool \
+
+          docker run --rm \
+            --entrypoint promtool \
             -v "${PWD}/k8s/monitoring/config/prometheus:/etc/prometheus:ro" \
             prom/prometheus:v3.5.0 \
             check config /etc/prometheus/prometheus.yml
-          docker run --rm --entrypoint amtool \
+
+          docker run --rm \
+            --entrypoint amtool \
             -v "${PWD}/k8s/monitoring/config/alertmanager:/etc/alertmanager:ro" \
             prom/alertmanager:v0.28.1 \
             check-config /etc/alertmanager/alertmanager.yml
@@ -136,27 +158,64 @@ jobs:
           severity: CRITICAL
           exit-code: "1"
 
+
+  # ============================================================
+  # 3. BUILD + IMAGE SECURITY + DAST
+  # ============================================================
   build:
     runs-on: ubuntu-latest
+
     needs:
       - quality
       - infrastructure-security
+
+    env:
+      SECRET_KEY: zap-test-secret-key
+      JWT_SECRET_KEY: zap-test-jwt-key
+
+      MYSQL_ROOT_PASSWORD: zap-test-root-password
+      MYSQL_PASSWORD: zap-test-mysql-password
+
+      DEFAULT_ADMIN_PASSWORD: zap-test-admin-password
+      FRONTEND_SECRET_KEY: zap-test-frontend-secret
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+
+      # --------------------------------------------------------
+      # Docker Build
+      # --------------------------------------------------------
+
       - name: Build user-service
-        run: docker build --pull -f infra/docker/user-service.Dockerfile -t user-service:latest .
+        run: |
+          docker build --pull \
+            -f infra/docker/user-service.Dockerfile \
+            -t user-service:latest .
 
       - name: Build course-service
-        run: docker build --pull -f infra/docker/course-service.Dockerfile -t course-service:latest .
+        run: |
+          docker build --pull \
+            -f infra/docker/course-service.Dockerfile \
+            -t course-service:latest .
 
       - name: Build certificate-service
-        run: docker build --pull -f infra/docker/certificate-service.Dockerfile -t certificate-service:latest .
+        run: |
+          docker build --pull \
+            -f infra/docker/certificate-service.Dockerfile \
+            -t certificate-service:latest .
 
       - name: Build frontend-service
-        run: docker build --pull -f infra/docker/frontend-service.Dockerfile -t frontend-service:latest .
+        run: |
+          docker build --pull \
+            -f infra/docker/frontend-service.Dockerfile \
+            -t frontend-service:latest .
+
+
+      # --------------------------------------------------------
+      # Docker Scout
+      # --------------------------------------------------------
 
       - name: Login to Docker Hub for Docker Scout
         uses: docker/login-action@v4
@@ -208,9 +267,110 @@ jobs:
           summary: true
           write-comment: false
 
+
+      # --------------------------------------------------------
+      # Start TrainingHub for DAST
+      # --------------------------------------------------------
+
+      - name: Start TrainingHub for DAST
+        run: |
+          docker compose up -d --no-build \
+            mysql \
+            user-service \
+            course-service \
+            certificate-service \
+            frontend-service
+
+          docker compose ps
+
+
+      # --------------------------------------------------------
+      # Wait until TrainingHub is ready
+      # --------------------------------------------------------
+
+      - name: Wait for TrainingHub
+        run: |
+          echo "Waiting for TrainingHub..."
+
+          for i in {1..30}; do
+
+            if curl -fsS http://localhost:3000/health; then
+              echo ""
+              echo "TrainingHub is ready."
+              exit 0
+            fi
+
+            echo "Attempt $i/30..."
+            sleep 5
+
+          done
+
+          echo "TrainingHub failed to start."
+
+          docker compose ps
+          docker compose logs
+
+          exit 1
+
+
+      # --------------------------------------------------------
+      # Prepare ZAP reports
+      # --------------------------------------------------------
+
+      - name: Prepare ZAP report directory
+        run: |
+          mkdir -p zap-reports
+          chmod 777 zap-reports
+
+
+      # --------------------------------------------------------
+      # OWASP ZAP - DAST Baseline
+      # --------------------------------------------------------
+
+      - name: OWASP ZAP Baseline Scan
+        run: |
+          docker run --rm \
+            --network host \
+            -v "${PWD}/zap-reports:/zap/wrk:rw" \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+            -t http://127.0.0.1:3000 \
+            -r zap-baseline-report.html \
+            -J zap-baseline-report.json \
+            -I
+
+
+      # --------------------------------------------------------
+      # Store DAST report
+      # --------------------------------------------------------
+
+      - name: Upload ZAP DAST report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: traininghub-zap-baseline
+          path: zap-reports/
+          if-no-files-found: warn
+
+
+      # --------------------------------------------------------
+      # Cleanup
+      # --------------------------------------------------------
+
+      - name: Stop TrainingHub
+        if: always()
+        run: |
+          docker compose down -v
+
+
+  # ============================================================
+  # 4. PUBLISH IMAGES TO GHCR
+  # ============================================================
   publish:
     runs-on: ubuntu-latest
+
     needs: build
+
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
@@ -225,36 +385,58 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set image name
-        run: echo "IMAGE_PREFIX=ghcr.io/${{ github.repository_owner }}" >> $GITHUB_ENV
+        run: |
+          echo "IMAGE_PREFIX=ghcr.io/${{ github.repository_owner }}" \
+            >> $GITHUB_ENV
 
       - name: Build and push user-service
         run: |
-          docker build --pull -f infra/docker/user-service.Dockerfile \
+          docker build --pull \
+            -f infra/docker/user-service.Dockerfile \
             -t ${{ env.IMAGE_PREFIX }}/user-service:${{ github.run_number }} \
             -t ${{ env.IMAGE_PREFIX }}/user-service:latest .
-          docker push ${{ env.IMAGE_PREFIX }}/user-service:${{ github.run_number }}
-          docker push ${{ env.IMAGE_PREFIX }}/user-service:latest
+
+          docker push \
+            ${{ env.IMAGE_PREFIX }}/user-service:${{ github.run_number }}
+
+          docker push \
+            ${{ env.IMAGE_PREFIX }}/user-service:latest
 
       - name: Build and push course-service
         run: |
-          docker build --pull -f infra/docker/course-service.Dockerfile \
+          docker build --pull \
+            -f infra/docker/course-service.Dockerfile \
             -t ${{ env.IMAGE_PREFIX }}/course-service:${{ github.run_number }} \
             -t ${{ env.IMAGE_PREFIX }}/course-service:latest .
-          docker push ${{ env.IMAGE_PREFIX }}/course-service:${{ github.run_number }}
-          docker push ${{ env.IMAGE_PREFIX }}/course-service:latest
+
+          docker push \
+            ${{ env.IMAGE_PREFIX }}/course-service:${{ github.run_number }}
+
+          docker push \
+            ${{ env.IMAGE_PREFIX }}/course-service:latest
 
       - name: Build and push certificate-service
         run: |
-          docker build --pull -f infra/docker/certificate-service.Dockerfile \
+          docker build --pull \
+            -f infra/docker/certificate-service.Dockerfile \
             -t ${{ env.IMAGE_PREFIX }}/certificate-service:${{ github.run_number }} \
             -t ${{ env.IMAGE_PREFIX }}/certificate-service:latest .
-          docker push ${{ env.IMAGE_PREFIX }}/certificate-service:${{ github.run_number }}
-          docker push ${{ env.IMAGE_PREFIX }}/certificate-service:latest
+
+          docker push \
+            ${{ env.IMAGE_PREFIX }}/certificate-service:${{ github.run_number }}
+
+          docker push \
+            ${{ env.IMAGE_PREFIX }}/certificate-service:latest
 
       - name: Build and push frontend-service
         run: |
-          docker build --pull -f infra/docker/frontend-service.Dockerfile \
+          docker build --pull \
+            -f infra/docker/frontend-service.Dockerfile \
             -t ${{ env.IMAGE_PREFIX }}/frontend-service:${{ github.run_number }} \
             -t ${{ env.IMAGE_PREFIX }}/frontend-service:latest .
-          docker push ${{ env.IMAGE_PREFIX }}/frontend-service:${{ github.run_number }}
-          docker push ${{ env.IMAGE_PREFIX }}/frontend-service:latest
+
+          docker push \
+            ${{ env.IMAGE_PREFIX }}/frontend-service:${{ github.run_number }}
+
+          docker push \
+            ${{ env.IMAGE_PREFIX }}/frontend-service:latest
