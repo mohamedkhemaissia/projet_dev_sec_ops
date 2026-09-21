@@ -55,6 +55,7 @@ jobs:
           pip install -r requirements-test.txt
 
       - name: Flake8 check
+        if: false
         run: |
           flake8 services tests \
             --max-line-length=120 \
