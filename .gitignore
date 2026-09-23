@@ -8,6 +8,8 @@ instance/
 /.pytest_cache/
 /.coverage
 /coverage.xml
+/htmlcov/
+/pytest-report.html
 *.log
 mysql_data/
 .env
