@@ -14,10 +14,6 @@ spec:
     metadata:
       labels:
         app: certificate-service
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/path: /metrics
-        prometheus.io/port: "5004"
     spec:
       securityContext:
         runAsNonRoot: true

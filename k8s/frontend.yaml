@@ -14,10 +14,6 @@ spec:
     metadata:
       labels:
         app: frontend-service
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/path: /metrics
-        prometheus.io/port: "3000"
     spec:
       securityContext:
         runAsNonRoot: true
@@ -108,23 +104,3 @@ spec:
       port: 3000
       targetPort: http
   type: ClusterIP
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: frontend-ingress
-  namespace: traininghub
-  annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: "1m"
-spec:
-  rules:
-    - host: traininghub.local
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: frontend-service
-                port:
-                  number: 3000

@@ -2,7 +2,7 @@
 
 TrainingHub est un PFE DevSecOps de gestion des formations, des inscriptions et
 des certificats. Le périmètre contient quatre services Flask, une base MySQL,
-une chaîne CI/CD, un déploiement Kubernetes et une stack d’observabilité.
+une chaîne CI/CD et un déploiement Kubernetes.
 
 | Service | Rôle | Port local |
 | --- | --- | --- |
@@ -17,9 +17,6 @@ flowchart LR
     U[Utilisateur] --> F[Frontend]
     F --> S[User / Course / Certificate services]
     S --> DB[(MySQL)]
-    S --> P[Prometheus]
-    P --> G[Grafana]
-    P --> A[Alertmanager]
 ```
 
 ## Lancement avec Docker Compose
@@ -45,9 +42,6 @@ docker compose ps
 Interfaces disponibles :
 
 - application : <http://localhost:3000>
-- Prometheus : <http://localhost:9090>
-- Grafana : <http://localhost:3001>
-- Alertmanager : <http://localhost:9093>
 
 Le compte administrateur utilise `DEFAULT_ADMIN_EMAIL` et
 `DEFAULT_ADMIN_PASSWORD` définis dans `.env`.
@@ -58,7 +52,7 @@ Pour arrêter :
 docker compose down
 ```
 
-Pour supprimer aussi toutes les données locales MySQL et de monitoring :
+Pour supprimer aussi les données locales MySQL :
 
 ```powershell
 docker compose down -v
@@ -75,7 +69,7 @@ La CI exécute :
 1. Gitleaks pour les secrets ;
 2. Flake8, Pytest avec au moins 55 % de couverture et Bandit ;
 3. pip-audit pour les dépendances ;
-4. Kustomize, Kubeconform et Trivy pour Kubernetes ;
+4. Kubeconform et Trivy pour Kubernetes ;
 5. le build des quatre images et Docker Scout pour les vulnérabilités ;
 6. la publication des images validées dans GHCR sur `main`.
 
@@ -83,85 +77,62 @@ Le workflow CD est déclenché avec un tag d’image immuable. Il récupère les
 secrets de l’environnement GitHub `production`, déploie sur Kubernetes, attend
 les rollouts, lance les smoke tests et effectue un rollback en cas d’échec.
 
-## Threat model STRIDE
 
-Les actifs principaux sont les comptes, JWT, mots de passe, données de
-formation, inscriptions, certificats et secrets d’infrastructure.
 
-| Menace | Risque principal | Contrôles |
-| --- | --- | --- |
-| Spoofing | Usurpation d’un utilisateur | JWT signé, expiration, issuer, audience et RBAC |
-| Tampering | Modification de données ou d’images | Validation des entrées, images scannées, filesystem en lecture seule |
-| Repudiation | Action impossible à retracer | Logs JSON et corrélation par `X-Request-ID` |
-| Information disclosure | Exposition de secrets ou certificats | GitHub/Kubernetes Secrets, Gitleaks et contrôle d’accès |
-| Denial of service | Saturation des API | Limites de ressources, HPA, health checks et rate limiting Ingress |
-| Elevation of privilege | Accès admin non autorisé | RBAC applicatif, conteneurs non-root, seccomp et capabilities supprimées |
+## Kubernetes local avec Kind
 
-Les frontières de confiance principales sont le navigateur, l’Ingress, les
-services applicatifs, MySQL, GHCR et le cluster Kubernetes. Les NetworkPolicy
-limitent les communications entre ces zones.
-
-## Kubernetes local avec Minikube
-
-Prérequis : Minikube et `kubectl`.
+Prérequis : Docker, Kind et `kubectl`.
 
 ```powershell
-minikube start --cpus=2 --memory=3072
-minikube addons enable metrics-server
-minikube addons enable ingress
+kind create cluster --name traininghub
+kubectl cluster-info --context kind-traininghub
 ```
 
-Construire les images directement dans Minikube :
+Construire les images localement, puis les charger dans Kind :
 
 ```powershell
-minikube image build -f infra/docker/user-service.Dockerfile -t user-service:pfe-local .
-minikube image build -f infra/docker/course-service.Dockerfile -t course-service:pfe-local .
-minikube image build -f infra/docker/certificate-service.Dockerfile -t certificate-service:pfe-local .
-minikube image build -f infra/docker/frontend-service.Dockerfile -t frontend-service:pfe-local .
+docker build -f infra/docker/user-service.Dockerfile -t user-service:pfe-local .
+docker build -f infra/docker/course-service.Dockerfile -t course-service:pfe-local .
+docker build -f infra/docker/certificate-service.Dockerfile -t certificate-service:pfe-local .
+docker build -f infra/docker/frontend-service.Dockerfile -t frontend-service:pfe-local .
+kind load docker-image user-service:pfe-local --name traininghub
+kind load docker-image course-service:pfe-local --name traininghub
+kind load docker-image certificate-service:pfe-local --name traininghub
+kind load docker-image frontend-service:pfe-local --name traininghub
 ```
 
 Créer les secrets locaux, remplacer toutes les valeurs `CHANGE_ME`, puis
-déployer l’application et le monitoring :
+déployer l’application avec les manifests simples :
 
 ```powershell
 Copy-Item k8s/secret.example.yaml k8s/secret.yaml
 notepad k8s/secret.yaml
+kubectl apply -f k8s/namespace.yaml
 kubectl apply -f k8s/secret.yaml
-kubectl apply -k k8s
-kubectl apply -k k8s/monitoring
+kubectl apply -f k8s/app-config.yaml
+kubectl create configmap mysql-initdb --namespace traininghub --from-file=init.sql=k8s/init.sql --dry-run=client -o yaml | kubectl apply -f -
+kubectl apply -f k8s/mysql.yaml
+kubectl apply -f k8s/user-service.yaml
+kubectl apply -f k8s/course-service.yaml
+kubectl apply -f k8s/certificate-service.yaml
+kubectl apply -f k8s/frontend.yaml
+kubectl wait --for=condition=Available deployment --all -n traininghub --timeout=300s
 kubectl get pods -n traininghub
-kubectl get pods -n monitoring
+kubectl get services,pvc -n traininghub
 ```
 
-Accès simple au portail sans configurer l’Ingress :
+Accès au portail :
 
 ```powershell
 kubectl port-forward -n traininghub service/frontend-service 3000:3000
 ```
 
-## Observabilité
-
-Chaque service expose `/health` et `/metrics`. Prometheus collecte les métriques
-de disponibilité, débit, erreurs et latence. Grafana fournit le dashboard
-`TrainingHub - Observability`; Alertmanager reçoit les alertes de service
-indisponible, taux d’erreurs élevé et latence excessive.
-
-Dans Kubernetes, ouvrir les interfaces avec :
-
-```powershell
-kubectl port-forward -n monitoring service/grafana 3001:3000
-kubectl port-forward -n monitoring service/prometheus 9090:9090
-kubectl port-forward -n monitoring service/alertmanager 9093:9093
-```
-
-Les logs applicatifs sont structurés en JSON et utilisent `X-Request-ID` pour
-suivre une requête entre les composants.
 
 ## Structure utile
 
 - `services/` : les quatre services Flask ;
-- `infra/` : Dockerfiles, MySQL et configuration de monitoring ;
-- `k8s/` : manifests, Kustomize, HPA, Ingress et NetworkPolicy ;
+- `infra/` : Dockerfiles et initialisation MySQL ;
+- `k8s/` : manifests Kubernetes simples pour l’application ;
 - `.github/workflows/` : pipelines CI et CD ;
 - `tests/` : tests automatisés des API ;
 - `postman/` : collection de démonstration des API.

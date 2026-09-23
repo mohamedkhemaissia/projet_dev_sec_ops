@@ -77,71 +77,46 @@ jobs:
       - name: Check cluster connection
         run: kubectl cluster-info
 
-      - name: Render immutable production manifests
-        id: images
+      - name: Prepare immutable production manifests
         shell: bash
         run: |
           set -euo pipefail
           image_prefix="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}"
           deployment_dir="${RUNNER_TEMP}/traininghub-k8s"
-          cp -R k8s "${deployment_dir}"
+          mkdir -p "${deployment_dir}"
 
-          cat > "${deployment_dir}/overlays/production/cd-images.yaml" <<EOF
-          apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: user-service
-            namespace: traininghub
-          spec:
-            template:
-              spec:
-                containers:
-                  - name: user-service
-                    image: ${image_prefix}/user-service:${IMAGE_TAG}
-          ---
-          apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: course-service
-            namespace: traininghub
-          spec:
-            template:
-              spec:
-                containers:
-                  - name: course-service
-                    image: ${image_prefix}/course-service:${IMAGE_TAG}
-          ---
-          apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: certificate-service
-            namespace: traininghub
-          spec:
-            template:
-              spec:
-                containers:
-                  - name: certificate-service
-                    image: ${image_prefix}/certificate-service:${IMAGE_TAG}
-          ---
-          apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: frontend-service
-            namespace: traininghub
-          spec:
-            template:
-              spec:
-                containers:
-                  - name: frontend-service
-                    image: ${image_prefix}/frontend-service:${IMAGE_TAG}
-          EOF
+          cp k8s/app-config.yaml "${deployment_dir}/01-app-config.yaml"
+          kubectl create configmap mysql-initdb \
+            --namespace traininghub \
+            --from-file=init.sql=k8s/init.sql \
+            --dry-run=client -o yaml \
+            > "${deployment_dir}/02-mysql-initdb.yaml"
+          cp k8s/mysql.yaml "${deployment_dir}/03-mysql.yaml"
+          cp k8s/user-service.yaml "${deployment_dir}/04-user-service.yaml"
+          cp k8s/course-service.yaml "${deployment_dir}/05-course-service.yaml"
+          cp k8s/certificate-service.yaml "${deployment_dir}/06-certificate-service.yaml"
+          cp k8s/frontend.yaml "${deployment_dir}/07-frontend.yaml"
 
-          printf '  - path: cd-images.yaml\n' >> "${deployment_dir}/overlays/production/kustomization.yaml"
-          kubectl kustomize "${deployment_dir}/overlays/production" \
-            --load-restrictor=LoadRestrictionsNone \
-            > "${RUNNER_TEMP}/traininghub-production.yaml"
-          kubectl apply --dry-run=client -f "${RUNNER_TEMP}/traininghub-production.yaml" > /dev/null
-          echo "deployment_dir=${deployment_dir}" >> "${GITHUB_OUTPUT}"
+          replace_image() {
+            service_name="$1"
+            manifest_name="$2"
+            image="${image_prefix}/${service_name}:${IMAGE_TAG}"
+            sed -i "s|image: ${service_name}:pfe-local|image: ${image}|" \
+              "${deployment_dir}/${manifest_name}"
+            grep -qF "image: ${image}" "${deployment_dir}/${manifest_name}"
+          }
+
+          replace_image user-service 04-user-service.yaml
+          replace_image course-service 05-course-service.yaml
+          replace_image certificate-service 06-certificate-service.yaml
+          replace_image frontend-service 07-frontend.yaml
+
+          sed -i '/- name: SESSION_COOKIE_SECURE/{n;s/value: "false"/value: "true"/;}' \
+            "${deployment_dir}/07-frontend.yaml"
+          grep -A1 -F 'name: SESSION_COOKIE_SECURE' "${deployment_dir}/07-frontend.yaml" \
+            | grep -qF 'value: "true"'
+
+          kubectl apply --dry-run=client -f "${deployment_dir}" > /dev/null
           echo "Deploying ${image_prefix} images with tag ${IMAGE_TAG}"
 
       - name: Create production secrets
@@ -185,7 +160,7 @@ jobs:
           }
           trap rollback ERR
 
-          kubectl apply -f "${RUNNER_TEMP}/traininghub-production.yaml"
+          kubectl apply -f "${RUNNER_TEMP}/traininghub-k8s"
           for deployment in "${deployments[@]}"; do
             kubectl -n traininghub annotate "deployment/${deployment}" \
               kubernetes.io/change-cause="GitHub Actions ${GITHUB_WORKFLOW} run ${GITHUB_RUN_NUMBER}, image tag ${IMAGE_TAG}" \

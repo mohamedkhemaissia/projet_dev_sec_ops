@@ -109,16 +109,26 @@ jobs:
         with:
           version: v1.36.1
 
-      - name: Render production and monitoring manifests
+      - name: Prepare application manifests
         run: |
           mkdir -p rendered
 
-          kubectl kustomize k8s/overlays/production \
-            --load-restrictor=LoadRestrictionsNone \
-            > rendered/traininghub-production.yaml
-
-          kubectl kustomize k8s/monitoring \
-            > rendered/traininghub-monitoring.yaml
+          cp k8s/namespace.yaml rendered/01-traininghub-namespace.yaml
+          cp k8s/app-config.yaml rendered/02-traininghub-app-config.yaml
+          kubectl create configmap mysql-initdb \
+            --namespace traininghub \
+            --from-file=init.sql=k8s/init.sql \
+            --dry-run=client -o yaml \
+            > rendered/03-traininghub-mysql-initdb.yaml
+          cp k8s/mysql.yaml rendered/04-traininghub-mysql.yaml
+          cp k8s/user-service.yaml rendered/05-traininghub-user-service.yaml
+          cp k8s/course-service.yaml rendered/06-traininghub-course-service.yaml
+          cp k8s/certificate-service.yaml rendered/07-traininghub-certificate-service.yaml
+          cp k8s/frontend.yaml rendered/08-traininghub-frontend.yaml
+          sed -i '/- name: SESSION_COOKIE_SECURE/{n;s/value: "false"/value: "true"/;}' \
+            rendered/08-traininghub-frontend.yaml
+          grep -A1 -F 'name: SESSION_COOKIE_SECURE' rendered/08-traininghub-frontend.yaml \
+            | grep -qF 'value: "true"'
 
       - name: Validate rendered Kubernetes manifests
         run: |
@@ -127,28 +137,14 @@ jobs:
             ghcr.io/yannh/kubeconform:v0.7.0 \
             -strict \
             -summary \
-            /manifests/traininghub-production.yaml \
-            /manifests/traininghub-monitoring.yaml
-
-      - name: Validate monitoring configuration
-        run: |
-          docker run --rm \
-            --entrypoint promtool \
-            -v "${PWD}/infra/monitoring/prometheus:/etc/prometheus:ro" \
-            prom/prometheus:v3.5.0 \
-            check config /etc/prometheus/prometheus.yml
-
-          docker run --rm \
-            --entrypoint promtool \
-            -v "${PWD}/k8s/monitoring/config/prometheus:/etc/prometheus:ro" \
-            prom/prometheus:v3.5.0 \
-            check config /etc/prometheus/prometheus.yml
-
-          docker run --rm \
-            --entrypoint amtool \
-            -v "${PWD}/k8s/monitoring/config/alertmanager:/etc/alertmanager:ro" \
-            prom/alertmanager:v0.28.1 \
-            check-config /etc/alertmanager/alertmanager.yml
+            /manifests/01-traininghub-namespace.yaml \
+            /manifests/02-traininghub-app-config.yaml \
+            /manifests/03-traininghub-mysql-initdb.yaml \
+            /manifests/04-traininghub-mysql.yaml \
+            /manifests/05-traininghub-user-service.yaml \
+            /manifests/06-traininghub-course-service.yaml \
+            /manifests/07-traininghub-certificate-service.yaml \
+            /manifests/08-traininghub-frontend.yaml
 
       - name: Trivy IaC security scan
         uses: aquasecurity/trivy-action@v0.36.0
