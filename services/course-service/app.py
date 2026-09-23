@@ -4,7 +4,6 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from routes.courses import courses_bp
 from config import Config
-from observability import init_observability
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -15,7 +14,6 @@ def create_app():
     CORS(app, resources={r"/*": {"origins": app.config["CORS_ORIGINS"]}})
 
     app.register_blueprint(courses_bp)
-    init_observability(app, Config.SERVICE_NAME)
 
     @app.after_request
     def add_security_headers(response):

@@ -22,7 +22,7 @@ RUN pip install --no-cache-dir --requirement requirements.txt \
     && pip uninstall --yes pip \
     && rm -rf /usr/local/lib/python*/ensurepip
 
-COPY services/frontend-service/app.py services/frontend-service/config.py services/frontend-service/api_client.py services/frontend-service/observability.py ./
+COPY services/frontend-service/app.py services/frontend-service/config.py services/frontend-service/api_client.py ./
 COPY services/frontend-service/routes ./routes
 COPY services/frontend-service/templates ./templates
 COPY services/frontend-service/static ./static
