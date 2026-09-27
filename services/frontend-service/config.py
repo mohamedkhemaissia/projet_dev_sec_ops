@@ -31,11 +31,12 @@ class Config:
     )
     SESSION_PERMANENT = True
     PERMANENT_SESSION_LIFETIME = timedelta(minutes=60)
+    # Sécurise le cookie de session en limitant son accès JavaScript et son envoi hors du site ou sans HTTPS.
     SESSION_COOKIE_NAME = "traininghub_session"
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "false").lower() == "true"
-
+    # Limite à deux heures la validité d’un jeton CSRF afin de réduire sa durée d’exploitation.
     WTF_CSRF_TIME_LIMIT = 7200
     MAX_CONTENT_LENGTH = 1024 * 1024
 

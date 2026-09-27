@@ -19,6 +19,7 @@ def create_app(config_object=Config, api_client=None):
     app.config["SESSION_CACHELIB"] = FileSystemCache(str(session_dir), threshold=500)
 
     Session(app)
+    # Active globalement la vérification CSRF des requêtes qui modifient les données.
     CSRFProtect(app)
 
     app.extensions["traininghub_api"] = api_client or TrainingHubAPI(
@@ -79,7 +80,7 @@ def create_app(config_object=Config, api_client=None):
     @app.errorhandler(403)
     def forbidden(_error):
         return render_template("errors/error.html", code=403), 403
-
+# Intercepte les requêtes dont le jeton CSRF est absent, invalide ou expiré.
     @app.errorhandler(CSRFError)
     def csrf_error(_error):
         flash(

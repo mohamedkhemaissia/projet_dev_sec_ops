@@ -30,6 +30,7 @@ class TrainingHubAPI:
 
     def _request(self, service, method, path, token=None, **kwargs):
         headers = dict(kwargs.pop("headers", {}))
+        # Ajoute le JWT à l’en-tête Authorization afin que le microservice authentifie la requête.
         if token:
             headers["Authorization"] = f"Bearer {token}"
         try:

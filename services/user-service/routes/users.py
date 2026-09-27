@@ -19,9 +19,11 @@ from models.user import public_user
 from config import Config
 
 users_bp = Blueprint("users", __name__, url_prefix="/api/v1/users")
+# Définit la liste blanche des rôles reconnus par le service.
 ALLOWED_ROLES = {"learner", "admin"}
 JWT_REQUIRED_CLAIMS = ["exp", "iat", "iss", "aud", "user_id", "email", "role"]
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+# Limite les champs selon le contexte ; seul un administrateur peut modifier un rôle.
 REGISTER_FIELDS = {"name", "email", "password"}
 PROFILE_FIELDS = {"name", "email", "password"}
 ADMIN_UPDATE_FIELDS = {"name", "role", "password"}
@@ -70,7 +72,7 @@ def validate_email(value):
         return None, "Invalid email format"
     return email, None
 
-
+# Vérifie que le mot de passe respecte la politique de sécurité avant son hachage.
 def validate_password(value):
     if not isinstance(value, str):
         return "password must be a string"
@@ -84,7 +86,7 @@ def validate_password(value):
 
 # ─── DÉCORATEURS ──────────────────────────────────────────────────────────────
 
-
+# Extrait et valide le Bearer token avant de retrouver l’utilisateur authentifié.
 def decode_current_user():
     auth_header = request.headers.get("Authorization", "")
     if not auth_header.startswith("Bearer "):
@@ -99,7 +101,7 @@ def decode_current_user():
             jsonify({"error": "unauthorized", "message": "Bearer token requis"}),
             401,
         )
-
+    # Vérifie la signature, l’algorithme, l’expiration, l’émetteur, l’audience et les claims obligatoires.
     try:
         data = jwt.decode(
             token,
@@ -109,6 +111,7 @@ def decode_current_user():
             audience=current_app.config["JWT_AUDIENCE"],
             options={"require": JWT_REQUIRED_CLAIMS},
         )
+        # Rejette séparément les tokens expirés et les autres tokens JWT invalides.
     except jwt.ExpiredSignatureError:
         return None, (
             jsonify({"error": "unauthorized", "message": "Token expire"}),
@@ -119,7 +122,7 @@ def decode_current_user():
             jsonify({"error": "unauthorized", "message": "Token invalide"}),
             401,
         )
-
+      # Valide le type et les valeurs des claims avant de faire confiance au contenu du JWT.
     if (
         type(data.get("user_id")) is not int
         or not isinstance(data.get("email"), str)
@@ -129,7 +132,7 @@ def decode_current_user():
             jsonify({"error": "unauthorized", "message": "Claims JWT invalides"}),
             401,
         )
-
+     # Recharge le compte afin de refuser un utilisateur supprimé et d’utiliser son rôle actuel.
     current_user = get_user_by_id(data["user_id"])
     if not current_user:
         return None, (
@@ -158,6 +161,7 @@ def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         current_user, error_response = decode_current_user()
+        # Le JWT établit l’identité ; le rôle détermine ensuite si l’action est autorisée.
         if error_response:
             return error_response
         if current_user.get("role") != "admin":
@@ -197,8 +201,9 @@ def register():
         return json_error(400, "bad_request", validation_error)
     if get_user_by_email(email):
         return json_error(409, "conflict", "Email already used")
-
+# Hache le mot de passe avant son stockage afin de ne jamais enregistrer sa valeur en clair.
     hashed = generate_password_hash(data["password"])
+    # Force le rôle learner lors d’une inscription publique pour empêcher une élévation de privilèges.
     user = create_user(name, email, hashed, "learner")
     return jsonify(public_user(user)), 201
 
@@ -222,16 +227,17 @@ def login():
     normalized_email, email_error = validate_email(email)
     if email_error or not isinstance(password, str):
         return json_error(401, "unauthorized", "Invalid credentials")
-
+# Compare le mot de passe fourni au hachage stocké sans révéler si le compte existe.
     user = get_user_by_email(normalized_email)
     if not user or not check_password_hash(user["password_hash"], password):
         return (
             jsonify({"error": "unauthorized", "message": "Identifiants invalides"}),
             401,
         )
-
+    # Sécurise le cookie de session en limitant son accès JavaScript et son envoi hors du site ou sans HTTPS.
     issued_at = datetime.now(tz=timezone.utc)
     token = jwt.encode(
+        # Le payload transporte l’identité et le rôle ; ses claims temporels et contextuels limitent l’utilisation du jeton.
         {
             "user_id": user["id"],
             "email": user["email"],
@@ -243,6 +249,7 @@ def login():
             "aud": current_app.config["JWT_AUDIENCE"],
             "jti": uuid4().hex,
         },
+        # Signe le JWT avec la clé secrète et l’algorithme configuré afin de garantir son intégrité.
         current_app.config["JWT_SECRET_KEY"],
         algorithm=current_app.config["JWT_ALGORITHM"],
     )
@@ -288,6 +295,7 @@ def update_profile(current_user):
         if existing and existing["id"] != current_user["id"]:
             return jsonify({"error": "conflict", "message": "Email déjà utilisé"}), 409
         allowed["email"] = email
+        # Valide puis hache le nouveau mot de passe avant de remplacer l’ancien hachage.
     if "password" in data:
         validation_error = validate_password(data["password"])
         if validation_error:
@@ -350,6 +358,7 @@ def update_user_admin(current_user, user_id):
         if validation_error:
             return json_error(400, "bad_request", validation_error)
         allowed["name"] = name
+        # Autorise le changement de rôle uniquement vers une valeur présente dans la liste blanche.
     if "role" in data:
         if data["role"] not in ALLOWED_ROLES:
             return (
@@ -361,6 +370,7 @@ def update_user_admin(current_user, user_id):
                 ),
                 400,
             )
+        # Applique la même validation et le même hachage lors d’une réinitialisation par un administrateur.
         allowed["role"] = data["role"]
     if "password" in data:
         validation_error = validate_password(data["password"])

@@ -112,6 +112,7 @@ def login():
         password = request.form.get("password", "")
         try:
             result = api().login(email, password)
+            # Initialise la session frontend et y conserve le JWT retourné après l’authentification.
             session.clear()
             session["access_token"] = result["token"]
             session["user"] = result["user"]

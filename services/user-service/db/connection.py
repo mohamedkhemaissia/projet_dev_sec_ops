@@ -38,7 +38,7 @@ def get_connection():
 def row_to_user(row):
     return row if row is not None else None
 
-
+# Crée ou met à jour l’administrateur par défaut en hachant le mot de passe fourni par l’environnement.
 def ensure_default_admin():
     admin = get_user_by_email(DEFAULT_ADMIN_EMAIL)
 

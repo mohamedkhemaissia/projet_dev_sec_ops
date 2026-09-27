@@ -24,6 +24,7 @@
                 <p>Entrez vos identifiants pour accéder à votre espace.</p>
             </div>
             <form method="post" class="modern-form">
+                {# Associe la soumission à la session courante afin de bloquer les requêtes forgées par un site tiers. #}
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group">
                     <label for="email">Adresse e-mail</label>
